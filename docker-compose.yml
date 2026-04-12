@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ergastech-app
+    ports:
+      - "3002:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: 1
+    restart: unless-stopped
+    networks:
+      - ergastech-network
+
+networks:
+  ergastech-network:
+    driver: bridge
