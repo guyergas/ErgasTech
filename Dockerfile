@@ -1,6 +1,8 @@
 # Stage 1: install dependencies
 FROM node:20-alpine AS deps
 WORKDIR /app
+# sharp requires platform-specific native build
+RUN apk add --no-cache python3 make g++
 COPY package.json ./
 RUN npm install
 
@@ -11,6 +13,8 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# Placeholder so build doesn't fail — real key injected at runtime
+ENV ANTHROPIC_API_KEY=placeholder
 RUN npm run build
 
 # Stage 3: production runtime
@@ -24,16 +28,21 @@ ENV PORT=3000
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Create directories and copy files from builder
-RUN mkdir -p /app/public /app/.next
-COPY --from=builder /app/package*.json ./
+# Copy Next.js standalone output
+RUN mkdir -p /app/public /app/.next /app/public/trip/uploads /data/trip
 COPY --from=builder /app/.next/standalone /app/
 COPY --from=builder /app/.next/static /app/.next/static
 COPY --from=builder /app/public /app/public
 
-# Ensure proper permissions
-RUN chown -R nextjs:nodejs /app
+# Install runtime deps into standalone node_modules
+RUN npm install --prefix /app socket.io@4.7.4 @anthropic-ai/sdk nanoid sharp --no-save
+
+# Copy custom server
+COPY --from=builder /app/custom-server.js /app/custom-server.js
+
+# Ensure proper permissions (chown data dir too)
+RUN chown -R nextjs:nodejs /app /data
 
 USER nextjs
 EXPOSE 3000
-CMD ["node", "server.js"]
+CMD ["node", "custom-server.js"]

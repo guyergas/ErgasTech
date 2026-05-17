@@ -11,6 +11,13 @@ services:
     environment:
       NODE_ENV: production
       NEXT_TELEMETRY_DISABLED: 1
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      TRIP_ADMIN_PIN: ${TRIP_ADMIN_PIN:-123456}
+      TRIP_DATA_DIR: /data/trip
+    volumes:
+      - ./public/ayala:/app/public/ayala
+      - trip-uploads:/app/public/trip/uploads
+      - trip-data:/data/trip
     restart: unless-stopped
     networks:
       - ergastech-network
@@ -18,3 +25,7 @@ services:
 networks:
   ergastech-network:
     driver: bridge
+
+volumes:
+  trip-uploads:
+  trip-data:
