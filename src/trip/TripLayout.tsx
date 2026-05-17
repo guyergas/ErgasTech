@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 import { family } from "./data";
 
 // CSS variables injected into trip layout — warm airy palette
@@ -79,6 +80,18 @@ function TripNav({ pathname }: { pathname: string }) {
     { href: "/trip/replay", label: "ניגון מסע" },
   ];
 
+  const [guestName, setGuestName] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("trip_guest");
+      if (raw) setGuestName(JSON.parse(raw).name ?? null);
+      else setGuestName(null);
+    } catch { /* ignore */ }
+  }, [pathname]); // re-check on route change
+
+  const profileHref = guestName ? "/trip/profile" : `/trip/login?next=${encodeURIComponent(pathname)}`;
+
   return (
     <nav
       style={{
@@ -130,24 +143,29 @@ function TripNav({ pathname }: { pathname: string }) {
             );
           })}
         </div>
+
+        {/* Profile / login icon */}
         <Link
-          href="/trip/admin"
+          href={profileHref}
+          title={guestName ? `הפרופיל של ${guestName}` : "כניסה"}
           style={{
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             width: 36,
             height: 36,
-            borderRadius: 12,
-            background: "var(--terra)",
-            color: "#fff",
-            fontSize: 18,
+            borderRadius: "50%",
+            background: guestName ? "var(--terra)" : "rgba(88,118,160,0.12)",
+            color: guestName ? "#fff" : "var(--ink-3)",
+            fontSize: guestName ? 15 : 20,
             fontWeight: 700,
-            boxShadow: "0 4px 12px rgba(88,118,160,0.3)",
+            border: guestName ? "none" : "0.5px solid var(--rule)",
+            textDecoration: "none",
+            flexShrink: 0,
             transition: "all .15s",
           }}
         >
-          +
+          {guestName ? guestName.slice(0, 1).toUpperCase() : "👤"}
         </Link>
       </div>
     </nav>

@@ -11,60 +11,26 @@ type Step = "capture" | "edit" | "done";
 export default function AdminPage() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
-  const [pin, setPin] = useState("");
-  const [pinError, setPinError] = useState("");
-  const [loggingIn, setLoggingIn] = useState(false);
 
   // Check auth on mount
   useEffect(() => {
     fetch("/api/trip/auth").then((r) => r.json()).then((d) => setIsAdmin(d.isAdmin));
   }, []);
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault();
-    setLoggingIn(true);
-    setPinError("");
-    const res = await fetch("/api/trip/auth", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pin }),
-    });
-    if (res.ok) {
-      setIsAdmin(true);
-    } else {
-      setPinError("קוד שגוי, נסו שוב");
-    }
-    setLoggingIn(false);
-  }
-
   if (isAdmin === null) return <div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>טוען...</div>;
-  if (!isAdmin) return <LoginForm pin={pin} setPin={setPin} onLogin={handleLogin} error={pinError} loading={loggingIn} />;
+  if (!isAdmin) {
+    return (
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "60px 20px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div className="trip-hand" style={{ fontSize: 48, marginBottom: 8 }}>✦</div>
+        <h1 className="trip-serif" style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 500, color: "var(--terra-d)" }}>כניסת משפחה</h1>
+        <p style={{ fontSize: 14, color: "var(--ink-3)", marginBottom: 24 }}>רק בני משפחה יכולים לפרסם זיכרונות</p>
+        <a href={`/trip/login?next=/trip/admin`} style={{ display: "inline-block", padding: "14px 28px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 16, fontWeight: 700, textDecoration: "none", boxShadow: "0 6px 20px rgba(88,118,160,0.35)" }}>
+          כניסה
+        </a>
+      </div>
+    );
+  }
   return <CaptureFlow onPublished={(id) => router.push(`/trip/post/${id}`)} />;
-}
-
-// ─── Login ────────────────────────────────────────────────────
-
-function LoginForm({ pin, setPin, onLogin, error, loading }: {
-  pin: string; setPin: (v: string) => void;
-  onLogin: (e: React.FormEvent) => void;
-  error: string; loading: boolean;
-}) {
-  return (
-    <div style={{ maxWidth: 480, margin: "0 auto", padding: "60px 20px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-      <div className="trip-hand" style={{ fontSize: 48, marginBottom: 8 }}>✦</div>
-      <h1 className="trip-serif" style={{ margin: "0 0 8px", fontSize: 28, fontWeight: 500, color: "var(--terra-d)" }}>כניסה לאדמין</h1>
-      <p style={{ fontSize: 14, color: "var(--ink-3)", marginBottom: 28 }}>הזינו את קוד המשפחה</p>
-      <form onSubmit={onLogin} style={{ width: "100%", maxWidth: 320 }}>
-        <input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder="קוד PIN" inputMode="numeric"
-          style={{ width: "100%", padding: "14px 16px", borderRadius: 14, border: `1.5px solid ${error ? "#e55" : "var(--rule)"}`, fontSize: 22, textAlign: "center", letterSpacing: 8, color: "var(--ink)", background: "var(--ivory)", outline: "none", fontFamily: "inherit", boxSizing: "border-box" as const, marginBottom: 8 }} />
-        {error && <p style={{ textAlign: "center", color: "#e55", fontSize: 13, margin: "0 0 8px" }}>{error}</p>}
-        <button type="submit" disabled={loading || !pin}
-          style={{ width: "100%", padding: "14px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 16, fontWeight: 700, border: "none", cursor: "pointer", boxShadow: "0 6px 20px rgba(88,118,160,0.35)" }}>
-          {loading ? "..." : "כניסה"}
-        </button>
-      </form>
-    </div>
-  );
 }
 
 // ─── Capture flow ─────────────────────────────────────────────

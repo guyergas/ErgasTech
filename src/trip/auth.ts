@@ -1,25 +1,31 @@
-// Admin auth helpers — PIN-based with signed cookie
-
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 
-const COOKIE_NAME = "trip_admin";
-const PIN = process.env.TRIP_ADMIN_PIN ?? "123456";
+export const COOKIE_NAME = "trip_admin";
 
-// Simple HMAC-like signature using the PIN itself as secret
-// Not cryptographically perfect but sufficient for a family app
-function sign(value: string): string {
-  // XOR-based simple checksum with PIN
+const SECRET = process.env.TRIP_AUTH_SECRET ?? "ergastrip-secret-2026";
+
+// Admin emails — comma-separated in env, or hardcoded fallback
+export function getAdminEmails(): string[] {
+  const env = process.env.TRIP_ADMIN_EMAILS ?? "";
+  if (env) return env.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
+  return ["guyergas@gmail.com", "yedikla@gmail.com", "ofirergas@gmail.com", "ergasayala@gmail.com"];
+}
+
+export function isAdminEmail(email: string): boolean {
+  return getAdminEmails().includes(email.trim().toLowerCase());
+}
+
+function sign(payload: string): string {
   let hash = 0;
-  const secret = PIN + "ergastrip";
-  for (let i = 0; i < value.length; i++) {
-    hash = ((hash << 5) - hash + value.charCodeAt(i) * secret.charCodeAt(i % secret.length)) | 0;
+  for (let i = 0; i < payload.length; i++) {
+    hash = ((hash << 5) - hash + payload.charCodeAt(i) * SECRET.charCodeAt(i % SECRET.length)) | 0;
   }
   return Math.abs(hash).toString(36);
 }
 
-export function makeToken(): string {
-  const payload = `admin:${Date.now()}`;
+export function makeToken(email: string): string {
+  const payload = `admin:${email}:${Date.now()}`;
   return `${payload}.${sign(payload)}`;
 }
 
@@ -31,7 +37,6 @@ export function verifyToken(token: string): boolean {
   return sig === sign(payload) && payload.startsWith("admin:");
 }
 
-// For use in Server Components / Route Handlers
 export async function isAdmin(): Promise<boolean> {
   try {
     const store = await cookies();
@@ -42,10 +47,7 @@ export async function isAdmin(): Promise<boolean> {
   }
 }
 
-// For use in API route handlers (NextRequest)
 export function isAdminRequest(req: NextRequest): boolean {
   const token = req.cookies.get(COOKIE_NAME)?.value ?? "";
   return verifyToken(token);
 }
-
-export { COOKIE_NAME };

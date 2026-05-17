@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { TripPost, FamilyMember } from "@/trip/data";
@@ -23,9 +23,17 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
   const [counts, setCounts] = useState(initialCounts);
   const [myReaction, setMyReaction] = useState("");
   const [comments, setComments] = useState(initialComments);
-  const [commentName, setCommentName] = useState("");
+  const [identity, setIdentity] = useState<{ name: string; email: string } | null>(null);
   const [commentBody, setCommentBody] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
+
+  useEffect(() => {
+    // Load guest identity from localStorage
+    try {
+      const raw = localStorage.getItem("trip_guest");
+      if (raw) setIdentity(JSON.parse(raw));
+    } catch { /* ignore */ }
+  }, []);
 
   const displayText = showOriginal || post.selectedTextVersion === "raw"
     ? post.rawText
@@ -34,6 +42,10 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
   const totalReactions = Object.values(counts).reduce((s, n) => s + n, 0);
 
   async function handleReact(emoji: string) {
+    if (!identity) {
+      window.location.href = `/trip/login?next=/trip/post/${post.id}`;
+      return;
+    }
     const next = emoji === myReaction ? "" : emoji;
     setMyReaction(next);
     try {
@@ -52,13 +64,13 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
 
   async function handleComment(e: React.FormEvent) {
     e.preventDefault();
-    if (!commentBody.trim() || !commentName.trim()) return;
+    if (!commentBody.trim() || !identity) return;
     setSubmittingComment(true);
     try {
       const res = await fetch(`/api/trip/posts/${post.id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ authorName: commentName, body: commentBody }),
+        body: JSON.stringify({ authorName: identity.name, body: commentBody }),
       });
       const newComment = await res.json();
       if (res.ok) {
@@ -176,6 +188,13 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
             ))}
             {totalReactions === 0 && <span style={{ fontSize: 12, color: "var(--ink-3)" }}>היו הראשונים להגיב</span>}
           </div>
+          {!identity && (
+            <div style={{ textAlign: "center", marginTop: 6 }}>
+              <Link href={`/trip/login?next=/trip/post/${post.id}`} style={{ fontSize: 12, color: "var(--terra)", textDecoration: "underline" }}>
+                התחברו כדי לתגובה
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Comments */}
@@ -184,19 +203,33 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
             תגובות · {comments.length}
           </h3>
 
-          {/* Comment form */}
-          <form onSubmit={handleComment} style={{ marginBottom: 18 }}>
-            <input value={commentName} onChange={(e) => setCommentName(e.target.value)} placeholder="השם שלכם" required
-              style={{ width: "100%", padding: "10px 12px", borderRadius: 12, border: "1px solid var(--rule)", fontSize: 14, color: "var(--ink)", background: "var(--paper)", outline: "none", fontFamily: "inherit", marginBottom: 8, boxSizing: "border-box" as const }} />
-            <div style={{ display: "flex", gap: 8 }}>
-              <input value={commentBody} onChange={(e) => setCommentBody(e.target.value)} placeholder="כתבו תגובה..." required
-                style={{ flex: 1, padding: "10px 12px", borderRadius: 12, border: "1px solid var(--rule)", fontSize: 14, color: "var(--ink)", background: "var(--paper)", outline: "none", fontFamily: "inherit" }} />
-              <button type="submit" disabled={submittingComment}
-                style={{ padding: "10px 16px", borderRadius: 12, background: "var(--terra)", color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", flexShrink: 0 }}>
-                {submittingComment ? "..." : "שלח"}
-              </button>
+          {/* Comment form — requires login */}
+          {identity ? (
+            <form onSubmit={handleComment} style={{ marginBottom: 18 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--terra)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
+                  {identity.name.slice(0, 1)}
+                </div>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{identity.name}</span>
+                <Link href="/trip/profile" style={{ marginRight: "auto", fontSize: 11, color: "var(--ink-3)", textDecoration: "underline" }}>שינוי</Link>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input value={commentBody} onChange={(e) => setCommentBody(e.target.value)} placeholder="כתבו תגובה..." required
+                  style={{ flex: 1, padding: "10px 12px", borderRadius: 12, border: "1px solid var(--rule)", fontSize: 14, color: "var(--ink)", background: "var(--paper)", outline: "none", fontFamily: "inherit" }} />
+                <button type="submit" disabled={submittingComment}
+                  style={{ padding: "10px 16px", borderRadius: 12, background: "var(--terra)", color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", flexShrink: 0 }}>
+                  {submittingComment ? "..." : "שלח"}
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div style={{ marginBottom: 18, padding: "16px", background: "var(--paper)", borderRadius: 16, border: "1px solid var(--rule)", textAlign: "center" }}>
+              <p style={{ margin: "0 0 10px", fontSize: 14, color: "var(--ink-2)" }}>כדי להגיב יש להתחבר</p>
+              <Link href={`/trip/login?next=/trip/post/${post.id}`} style={{ display: "inline-block", padding: "10px 20px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
+                כניסה / הרשמה
+              </Link>
             </div>
-          </form>
+          )}
 
           {/* Comment list */}
           {comments.map((c) => {
