@@ -1,29 +1,152 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Background -->
-  <rect width="512" height="512" rx="112" fill="#3A5475"/>
+  <defs>
+    <radialGradient id="ocean" cx="38%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#8BAFC4"/>
+      <stop offset="60%" stop-color="#5E8FA8"/>
+      <stop offset="100%" stop-color="#3A6B85"/>
+    </radialGradient>
+    <radialGradient id="land" cx="40%" cy="30%" r="65%">
+      <stop offset="0%" stop-color="#E8D8A8"/>
+      <stop offset="50%" stop-color="#C8B878"/>
+      <stop offset="100%" stop-color="#A89448"/>
+    </radialGradient>
+    <radialGradient id="globe-shine" cx="35%" cy="28%" r="55%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.28)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+    <radialGradient id="bg-grad" cx="50%" cy="45%" r="50%">
+      <stop offset="0%" stop-color="#4A3520"/>
+      <stop offset="100%" stop-color="#2A1E10"/>
+    </radialGradient>
+    <clipPath id="globe-clip">
+      <circle cx="256" cy="256" r="192"/>
+    </clipPath>
+    <filter id="shadow">
+      <feDropShadow dx="8" dy="14" stdDeviation="16" flood-color="#1a1005" flood-opacity="0.6"/>
+    </filter>
+  </defs>
 
-  <!-- Globe circle -->
-  <circle cx="256" cy="256" r="155" fill="none" stroke="#F2E8D4" stroke-width="8"/>
+  <!-- Dark wooden base -->
+  <rect width="512" height="512" rx="100" fill="url(#bg-grad)"/>
 
-  <!-- Latitude lines -->
-  <ellipse cx="256" cy="256" rx="155" ry="58" fill="none" stroke="#F2E8D4" stroke-width="4.5" opacity="0.55"/>
-  <line x1="101" y1="256" x2="411" y2="256" stroke="#F2E8D4" stroke-width="4.5" opacity="0.55"/>
-  <ellipse cx="256" cy="190" rx="124" ry="26" fill="none" stroke="#F2E8D4" stroke-width="3" opacity="0.4"/>
-  <ellipse cx="256" cy="322" rx="124" ry="26" fill="none" stroke="#F2E8D4" stroke-width="3" opacity="0.4"/>
+  <!-- Globe shadow -->
+  <circle cx="264" cy="270" r="192" fill="rgba(0,0,0,0.35)" filter="url(#shadow)"/>
 
-  <!-- Meridian lines -->
-  <ellipse cx="256" cy="256" rx="58" ry="155" fill="none" stroke="#F2E8D4" stroke-width="4.5" opacity="0.55"/>
-  <line x1="256" y1="101" x2="256" y2="411" stroke="#F2E8D4" stroke-width="4.5" opacity="0.55"/>
+  <!-- Ocean -->
+  <circle cx="256" cy="256" r="192" fill="url(#ocean)"/>
 
-  <!-- Route path (Thailand journey) -->
-  <path d="M 268 175 Q 282 205 278 230 Q 274 258 280 285 Q 288 318 268 352"
-        fill="none" stroke="#C9954E" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.95"/>
+  <!-- Continents -->
+  <g clip-path="url(#globe-clip)" fill="url(#land)" stroke="#8A7030" stroke-width="1.5" stroke-linejoin="round">
 
-  <!-- Start dot -->
-  <circle cx="268" cy="175" r="12" fill="#C9954E"/>
-  <!-- End dot -->
-  <circle cx="268" cy="352" r="12" fill="#F2C994"/>
+    <!-- Europe -->
+    <path d="M 234 101 L 245 95 L 261 98 L 277 95 L 288 101 L 293 112 L 288 123 L 299 128 L 293 139 L 283 144 L 272 141 L 261 149 L 250 144 L 238 149 L 229 144 L 224 133 L 229 123 L 224 112 Z"/>
 
-  <!-- ✦ glyph -->
-  <text x="164" y="238" font-family="serif" font-size="38" fill="#F2E8D4" opacity="0.7">✦</text>
+    <!-- Scandinavia -->
+    <path d="M 256 75 L 267 69 L 277 75 L 283 85 L 277 95 L 267 98 L 256 93 Z"/>
+    <path d="M 283 75 L 293 69 L 299 80 L 293 91 L 285 88 Z"/>
+
+    <!-- Africa -->
+    <path d="M 235 155 L 251 149 L 267 152 L 283 155 L 293 171 L 299 192 L 293 219 L 283 245 L 267 267 L 256 277 L 245 267 L 235 240 L 224 213 L 219 187 L 224 165 Z"/>
+
+    <!-- Asia -->
+    <path d="M 293 96 L 320 91 L 352 96 L 373 107 L 395 112 L 416 128 L 421 144 L 405 155 L 379 160 L 363 155 L 341 165 L 320 171 L 304 165 L 293 149 L 288 133 L 293 117 Z"/>
+
+    <!-- India -->
+    <path d="M 341 165 L 352 171 L 357 187 L 352 208 L 341 219 L 331 208 L 325 187 L 331 171 Z"/>
+
+    <!-- Southeast Asia / Thailand -->
+    <path d="M 373 165 L 389 171 L 400 187 L 395 203 L 384 213 L 373 208 L 363 197 L 363 181 Z"/>
+    <path d="M 384 213 L 389 229 L 384 245 L 379 235 L 379 219 Z"/>
+
+    <!-- Japan -->
+    <path d="M 411 128 L 421 123 L 427 133 L 421 144 L 413 139 Z"/>
+    <path d="M 421 144 L 429 141 L 435 152 L 427 157 L 419 152 Z"/>
+
+    <!-- North America -->
+    <path d="M 101 96 L 123 85 L 149 85 L 176 91 L 197 101 L 208 117 L 203 139 L 187 155 L 165 165 L 144 160 L 123 149 L 107 133 L 96 117 Z"/>
+    <path d="M 96 96 L 107 85 L 117 91 L 112 101 L 101 101 Z"/>
+    <path d="M 171 165 L 176 176 L 171 187 L 165 176 Z"/>
+    <path d="M 117 165 L 139 165 L 149 181 L 144 197 L 133 203 L 123 192 L 112 176 Z"/>
+
+    <!-- South America -->
+    <path d="M 149 208 L 171 203 L 187 213 L 192 240 L 187 272 L 176 299 L 160 315 L 144 304 L 133 277 L 128 245 L 133 219 Z"/>
+
+    <!-- Greenland -->
+    <path d="M 203 53 L 224 48 L 240 59 L 235 75 L 219 80 L 203 75 Z"/>
+
+    <!-- Australia -->
+    <path d="M 384 267 L 411 261 L 432 272 L 437 293 L 427 315 L 405 320 L 384 309 L 373 288 L 379 272 Z"/>
+    <path d="M 443 315 L 448 304 L 453 315 L 448 325 Z"/>
+
+    <!-- Antarctica -->
+    <path d="M 139 395 L 213 387 L 293 387 L 368 395 L 405 405 L 400 421 L 320 427 L 240 427 L 160 421 L 128 411 Z" opacity="0.7"/>
+
+    <!-- British Isles -->
+    <path d="M 219 107 L 227 101 L 232 112 L 224 117 Z"/>
+    <path d="M 211 112 L 216 107 L 219 117 L 214 123 Z"/>
+
+    <!-- Madagascar -->
+    <path d="M 299 229 L 304 224 L 309 235 L 304 251 L 299 240 Z"/>
+
+    <!-- Iceland -->
+    <path d="M 203 80 L 213 75 L 219 85 L 208 91 Z"/>
+  </g>
+
+  <!-- Latitude grid -->
+  <g clip-path="url(#globe-clip)" fill="none" stroke="#2A4E68" stroke-width="1.2" opacity="0.45">
+    <ellipse cx="256" cy="256" rx="192" ry="21"/>
+    <ellipse cx="256" cy="203" rx="187" ry="19"/>
+    <ellipse cx="256" cy="309" rx="187" ry="19"/>
+    <ellipse cx="256" cy="155" rx="155" ry="13"/>
+    <ellipse cx="256" cy="357" rx="155" ry="13"/>
+    <ellipse cx="256" cy="107" rx="117" ry="11"/>
+    <ellipse cx="256" cy="405" rx="117" ry="11"/>
+  </g>
+
+  <!-- Longitude grid -->
+  <g clip-path="url(#globe-clip)" fill="none" stroke="#2A4E68" stroke-width="1.2" opacity="0.35">
+    <ellipse cx="256" cy="256" rx="48" ry="192"/>
+    <ellipse cx="256" cy="256" rx="96" ry="192"/>
+    <ellipse cx="256" cy="256" rx="144" ry="192"/>
+    <line x1="256" y1="64" x2="256" y2="448"/>
+  </g>
+
+  <!-- Cartographic text -->
+  <g clip-path="url(#globe-clip)" font-family="Georgia,serif" fill="#1A3A50" opacity="0.45" font-size="11">
+    <text x="69" y="208">TROPIC OF CANCER</text>
+    <text x="69" y="312">TROPIC OF CAPRICORN</text>
+    <text x="139" y="260">EQUATOR</text>
+  </g>
+
+  <!-- Thailand pin -->
+  <g clip-path="url(#globe-clip)">
+    <circle cx="384" cy="192" r="11" fill="#C0392B" stroke="#fff" stroke-width="3" opacity="0.9"/>
+    <circle cx="384" cy="192" r="19" fill="none" stroke="#C0392B" stroke-width="2.5" opacity="0.45"/>
+  </g>
+
+  <!-- Glass shine -->
+  <circle cx="256" cy="256" r="192" fill="url(#globe-shine)"/>
+
+  <!-- Globe rim -->
+  <circle cx="256" cy="256" r="192" fill="none" stroke="#D4A84B" stroke-width="5" opacity="0.7"/>
+
+  <!-- Brass meridian band -->
+  <rect x="240" y="58" width="32" height="397" rx="16" fill="none" stroke="#C8922A" stroke-width="9" opacity="0.55" clip-path="url(#globe-clip)"/>
+
+  <!-- Outer brass ring -->
+  <circle cx="256" cy="256" r="211" fill="none" stroke="#C8922A" stroke-width="16" opacity="0.65"/>
+  <circle cx="256" cy="256" r="219" fill="none" stroke="#8B6010" stroke-width="5" opacity="0.5"/>
+  <circle cx="256" cy="256" r="203" fill="none" stroke="#E8C060" stroke-width="2.5" opacity="0.4"/>
+
+  <!-- Degree marks -->
+  <g stroke="#C8922A" stroke-width="3" opacity="0.65">
+    <line x1="256" y1="34" x2="256" y2="45"/>
+    <line x1="256" y1="467" x2="256" y2="478"/>
+    <line x1="34" y1="256" x2="45" y2="256"/>
+    <line x1="467" y1="256" x2="478" y2="256"/>
+    <line x1="98" y1="98" x2="106" y2="106"/>
+    <line x1="406" y1="406" x2="414" y2="414"/>
+    <line x1="406" y1="98" x2="414" y2="106"/>
+    <line x1="98" y1="406" x2="106" y2="414"/>
+  </g>
 </svg>
