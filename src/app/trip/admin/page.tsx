@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { familyList, family } from "@/trip/data";
 import { Avatar } from "@/trip/TripComponents";
@@ -10,10 +10,35 @@ import type { MediaItem } from "@/trip/data";
 export default function AdminPage() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/trip/auth").then((r) => r.json()).then((d) => setIsAdmin(d.isAdmin)).catch(() => setIsAdmin(false));
+    try {
+      fetch("/api/trip/auth")
+        .then((r) => r.json())
+        .then((d) => setIsAdmin(d.isAdmin))
+        .catch((err) => {
+          console.error("Auth check failed:", err);
+          setIsAdmin(false);
+        });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Error in auth check:", msg);
+      setError(msg);
+      setIsAdmin(false);
+    }
   }, []);
+
+  if (error) {
+    return (
+      <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <div style={{ background: "rgba(220,60,60,0.1)", border: "1px solid rgba(220,60,60,0.3)", borderRadius: 12, padding: 16, marginBottom: 20, width: "100%" }}>
+          <div style={{ fontSize: 12, color: "#c00", wordBreak: "break-word" }}>⚠️ שגיאה: {error}</div>
+        </div>
+        <a href="/trip" style={{ padding: "10px 20px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 14, textDecoration: "none" }}>חזור לדף הבית</a>
+      </div>
+    );
+  }
 
   if (isAdmin === null) return <div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>טוען...</div>;
   if (!isAdmin) {
@@ -31,7 +56,9 @@ export default function AdminPage() {
 
   return (
     <>
-      <ComposeMemory onPublished={(id) => router.push(`/trip/post/${id}`)} />
+      <ErrorBoundary>
+        <ComposeMemory onPublished={(id) => router.push(`/trip/post/${id}`)} />
+      </ErrorBoundary>
       <div style={{
         position: "fixed", bottom: 20, right: 20, zIndex: 9999,
         width: 50, height: 50, borderRadius: "50%",
@@ -43,6 +70,42 @@ export default function AdminPage() {
       </div>
     </>
   );
+}
+
+// ─── Error Boundary ───────────────────────────────────────────
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error("ComposeMemory error:", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ maxWidth: 480, margin: "0 auto", padding: "20px" }}>
+          <div style={{ background: "rgba(220,60,60,0.1)", border: "1px solid rgba(220,60,60,0.3)", borderRadius: 12, padding: 16, marginBottom: 20 }}>
+            <div style={{ fontSize: 12, color: "#c00", wordBreak: "break-word" }}>
+              ⚠️ שגיאה בטעינת הטופס: {this.state.error?.message}
+            </div>
+          </div>
+          <a href="/trip" style={{ display: "inline-block", padding: "10px 20px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 14, textDecoration: "none" }}>חזור לדף הבית</a>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }
 
 // ─── Unified compose ──────────────────────────────────────────
