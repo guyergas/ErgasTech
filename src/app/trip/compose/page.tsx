@@ -54,7 +54,10 @@ function ComposeForm() {
   const [audioUrl, setAudioUrl] = useState("");
   const [voiceLen, setVoiceLen] = useState(0);
   const [recording, setRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [uploadingAudio, setUploadingAudio] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [locationName, setLocationName] = useState("");
   const [city, setCity] = useState("");
@@ -132,13 +135,31 @@ function ComposeForm() {
   const recordAudio = async () => {
     if (recording) {
       // Stop recording
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.stop();
+      }
+      if (timerRef.current) clearInterval(timerRef.current);
       setRecording(false);
+      setRecordingSeconds(0);
       return;
     }
 
     try {
+      setRecordingSeconds(0);
+      setError(null);
+
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mr = new MediaRecorder(stream, { mimeType: "audio/webm" });
+
+      // Find supported mime type
+      let mimeType = "audio/webm";
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "audio/mp4";
+      }
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = "";
+      }
+
+      const mr = new MediaRecorder(stream, { mimeType: mimeType || undefined });
       const chunks: Blob[] = [];
       let seconds = 0;
 
@@ -148,19 +169,36 @@ function ComposeForm() {
 
       mr.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
-        const blob = new Blob(chunks, { type: "audio/webm" });
 
-        // Upload audio
+        if (chunks.length === 0) {
+          setError("No audio recorded");
+          return;
+        }
+
+        const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
+
+        // Show upload status
         setUploadingAudio(true);
+        setError(`Uploading audio (${(blob.size / 1024).toFixed(1)} KB)...`);
+
         const fd = new FormData();
         fd.append("file", blob, `voice-${Date.now()}.webm`);
 
         try {
           const res = await fetch("/api/trip/upload", { method: "POST", body: fd });
+
+          if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.error || `Upload failed: ${res.status}`);
+          }
+
           const data = await res.json();
           if (data.url) {
             setAudioUrl(data.url);
             setVoiceLen(seconds);
+            setError(null);
+          } else {
+            throw new Error("No URL in response");
           }
         } catch (e) {
           setError(`Audio upload failed: ${e instanceof Error ? e.message : String(e)}`);
@@ -168,18 +206,30 @@ function ComposeForm() {
         setUploadingAudio(false);
       };
 
-      mr.start();
+      mr.start(100);
+      mediaRecorderRef.current = mr;
       setRecording(true);
 
+      // Timer that updates UI
+      let timerSeconds = 0;
       const timer = setInterval(() => {
-        seconds++;
-        if (seconds >= 60) {
-          mr.stop();
-          clearInterval(timer);
+        timerSeconds++;
+        seconds = timerSeconds;
+        setRecordingSeconds(timerSeconds);
+
+        if (timerSeconds >= 120) {
+          // Auto-stop after 2 minutes
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+            mediaRecorderRef.current.stop();
+          }
+          if (timerRef.current) clearInterval(timerRef.current);
         }
       }, 1000);
+
+      timerRef.current = timer;
     } catch (e) {
-      setError(`Microphone access denied: ${e instanceof Error ? e.message : String(e)}`);
+      setError(`Microphone error: ${e instanceof Error ? e.message : String(e)}`);
+      setRecording(false);
     }
   };
 
@@ -410,9 +460,17 @@ function ComposeForm() {
       {/* Audio */}
       <Section>
         <SectionLabel>הקלטה קולית</SectionLabel>
-        <button onClick={recordAudio} disabled={uploadingAudio} style={{ width: 52, height: 52, borderRadius: "50%", background: recording ? "rgba(220,60,60,0.9)" : `${m.color}cc`, color: "#fff", border: "none", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          {recording ? "⏹" : "🎙"}
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button onClick={recordAudio} disabled={uploadingAudio} style={{ width: 52, height: 52, borderRadius: "50%", background: recording ? "rgba(220,60,60,0.9)" : `${m.color}cc`, color: "#fff", border: "none", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", animation: recording ? "pulse 1s infinite" : "none" }}>
+            {recording ? "⏹" : "🎙"}
+          </button>
+          {recording && (
+            <div style={{ fontSize: 18, fontWeight: 700, color: "var(--terra)" }}>
+              {String(Math.floor(recordingSeconds / 60)).padStart(2, "0")}:{String(recordingSeconds % 60).padStart(2, "0")}
+            </div>
+          )}
+          {uploadingAudio && <div style={{ fontSize: 14, color: "var(--ink-3)" }}>⏳ Uploading...</div>}
+        </div>
         {audioUrl && (
           <div style={{ marginTop: 12, background: `${m.color}18`, borderRadius: 12, padding: "12px 14px", border: `0.5px solid ${m.color}30` }}>
             <audio controls src={audioUrl} style={{ width: "100%", marginBottom: 10 }} />
