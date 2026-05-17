@@ -11,19 +11,33 @@ export default function AdminPage() {
   const router = useRouter();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [debug, setDebug] = useState<string[]>(["Page loaded"]);
+
+  const addDebug = (msg: string) => {
+    console.log(msg);
+    setDebug((prev) => [...prev.slice(-4), msg]);
+  };
 
   useEffect(() => {
+    addDebug("Auth check starting...");
     try {
       fetch("/api/trip/auth")
-        .then((r) => r.json())
-        .then((d) => setIsAdmin(d.isAdmin))
+        .then((r) => {
+          addDebug("Auth response received");
+          return r.json();
+        })
+        .then((d) => {
+          addDebug(`Auth check complete: isAdmin=${d.isAdmin}`);
+          setIsAdmin(d.isAdmin);
+        })
         .catch((err) => {
-          console.error("Auth check failed:", err);
+          const msg = `Auth check failed: ${err instanceof Error ? err.message : String(err)}`;
+          addDebug(msg);
           setIsAdmin(false);
         });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("Error in auth check:", msg);
+      const msg = `Error in auth check: ${err instanceof Error ? err.message : String(err)}`;
+      addDebug(msg);
       setError(msg);
       setIsAdmin(false);
     }
@@ -59,14 +73,19 @@ export default function AdminPage() {
       <ErrorBoundary>
         <ComposeMemory onPublished={(id) => router.push(`/trip/post/${id}`)} />
       </ErrorBoundary>
+
+      {/* Debug panel */}
       <div style={{
-        position: "fixed", bottom: 20, right: 20, zIndex: 9999,
-        width: 50, height: 50, borderRadius: "50%",
-        background: "rgba(88,118,160,0.85)", color: "#fff", fontSize: 24,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.2)", cursor: "help"
-      }} title="Press F12 for console">
-        🐛
+        position: "fixed", bottom: 20, left: 20, right: 20, maxWidth: 300, zIndex: 9999,
+        background: "rgba(30, 30, 30, 0.95)", color: "#0f0", fontSize: 11, fontFamily: "monospace",
+        padding: 10, borderRadius: 8, border: "1px solid #0f0",
+        maxHeight: 150, overflowY: "auto"
+      }}>
+        {debug.map((line, i) => (
+          <div key={i} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+            {line}
+          </div>
+        ))}
       </div>
     </>
   );
@@ -86,8 +105,8 @@ class ErrorBoundary extends React.Component<
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error) {
-    console.error("ComposeMemory error:", error);
+  componentDidCatch() {
+    // Error already captured
   }
 
   render() {
