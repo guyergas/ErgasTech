@@ -149,7 +149,7 @@ function TripNav({ pathname }: { pathname: string }) {
         {/* New memory button — admins only */}
         {isAdmin && (
           <Link
-            href="/trip/admin"
+            href="/trip/compose"
             title="זיכרון חדש"
             style={{
               display: "flex",

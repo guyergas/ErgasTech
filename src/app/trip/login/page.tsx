@@ -55,7 +55,7 @@ function LoginPageInner() {
       // Admin — restore name from localStorage if exists, issue cookie
       const existing = (() => { try { return JSON.parse(localStorage.getItem("trip_guest") ?? "{}"); } catch { return {}; } })();
       try { localStorage.setItem("trip_guest", JSON.stringify({ name: existing.name ?? trimmedEmail.split("@")[0], email: trimmedEmail })); } catch { /* ignore */ }
-      router.push("/trip/admin");
+      router.push("/trip/compose");
       return;
     }
 
@@ -90,7 +90,7 @@ function LoginPageInner() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: identity.email }),
     }).then((r) => {
-      if (r.ok) router.push("/trip/admin");
+      if (r.ok) router.push("/trip/compose");
       else router.push(next);
     }).catch(() => router.push(next));
   }
