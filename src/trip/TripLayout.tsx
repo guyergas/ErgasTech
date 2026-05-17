@@ -81,6 +81,7 @@ function TripNav({ pathname }: { pathname: string }) {
   ];
 
   const [guestName, setGuestName] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     try {
@@ -88,7 +89,8 @@ function TripNav({ pathname }: { pathname: string }) {
       if (raw) setGuestName(JSON.parse(raw).name ?? null);
       else setGuestName(null);
     } catch { /* ignore */ }
-  }, [pathname]); // re-check on route change
+    fetch("/api/trip/auth").then(r => r.json()).then(d => setIsAdmin(!!d.isAdmin));
+  }, [pathname]);
 
   const profileHref = guestName ? "/trip/profile" : `/trip/login?next=${encodeURIComponent(pathname)}`;
 
@@ -143,6 +145,32 @@ function TripNav({ pathname }: { pathname: string }) {
             );
           })}
         </div>
+
+        {/* New memory button — admins only */}
+        {isAdmin && (
+          <Link
+            href="/trip/admin"
+            title="זיכרון חדש"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 36,
+              height: 36,
+              borderRadius: 12,
+              background: "var(--terra)",
+              color: "#fff",
+              fontSize: 22,
+              fontWeight: 700,
+              textDecoration: "none",
+              boxShadow: "0 4px 12px rgba(88,118,160,0.3)",
+              flexShrink: 0,
+              transition: "all .15s",
+            }}
+          >
+            +
+          </Link>
+        )}
 
         {/* Profile / login icon */}
         <Link
