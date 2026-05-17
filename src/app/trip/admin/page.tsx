@@ -69,25 +69,73 @@ export default function AdminPage() {
   }
 
   return (
-    <>
-      <ErrorBoundary>
-        <ComposeMemory onPublished={(id) => router.push(`/trip/post/${id}`)} />
-      </ErrorBoundary>
-
-      {/* Debug panel */}
+    <div style={{ padding: "20px", maxWidth: "500px", margin: "0 auto" }}>
+      {/* Debug panel - always visible */}
       <div style={{
-        position: "fixed", bottom: 20, left: 20, right: 20, maxWidth: 300, zIndex: 9999,
-        background: "rgba(30, 30, 30, 0.95)", color: "#0f0", fontSize: 11, fontFamily: "monospace",
-        padding: 10, borderRadius: 8, border: "1px solid #0f0",
-        maxHeight: 150, overflowY: "auto"
+        background: "#1a1a1a", color: "#00ff00", fontSize: "12px", fontFamily: "monospace",
+        padding: "12px", borderRadius: "4px", border: "1px solid #00ff00",
+        marginBottom: "20px", maxHeight: "200px", overflowY: "auto"
       }}>
+        <div style={{ fontWeight: "bold", marginBottom: "8px" }}>Debug Log:</div>
         {debug.map((line, i) => (
-          <div key={i} style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-            {line}
-          </div>
+          <div key={i}>→ {line}</div>
         ))}
       </div>
-    </>
+
+      {/* Error display */}
+      {error && (
+        <div style={{
+          background: "#ffcccc", color: "#cc0000", padding: "12px",
+          borderRadius: "4px", marginBottom: "20px", wordBreak: "break-word"
+        }}>
+          <strong>❌ Error:</strong><br/>{error}
+        </div>
+      )}
+
+      {/* Main content */}
+      {isAdmin === null && (
+        <div style={{ textAlign: "center", padding: "40px", color: "var(--ink-3)" }}>
+          ⏳ טוען...
+        </div>
+      )}
+
+      {!isAdmin && isAdmin !== null && (
+        <div style={{ textAlign: "center", padding: "40px" }}>
+          <div style={{ fontSize: "48px", marginBottom: "16px" }}>✦</div>
+          <h1 style={{ color: "var(--terra-d)", fontSize: "24px", marginBottom: "16px" }}>
+            כניסת משפחה
+          </h1>
+          <p style={{ color: "var(--ink-3)", marginBottom: "24px" }}>
+            רק בני משפחה יכולים לפרסם זיכרונות
+          </p>
+          <a
+            href={`/trip/login?next=/trip/admin`}
+            style={{
+              display: "inline-block",
+              padding: "12px 24px",
+              background: "var(--terra)",
+              color: "#fff",
+              borderRadius: "100px",
+              textDecoration: "none",
+              fontWeight: "bold"
+            }}
+          >
+            כניסה
+          </a>
+        </div>
+      )}
+
+      {isAdmin === true && (
+        <div>
+          <div style={{ background: "#ccffcc", color: "#00cc00", padding: "12px", borderRadius: "4px", marginBottom: "20px" }}>
+            ✅ Admin mode active - trying to load form...
+          </div>
+          <ErrorBoundary>
+            <ComposeMemory onPublished={(id) => router.push(`/trip/post/${id}`)} />
+          </ErrorBoundary>
+        </div>
+      )}
+    </div>
   );
 }
 
