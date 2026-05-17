@@ -35,7 +35,7 @@ COPY --from=builder /app/.next/static /app/.next/static
 COPY --from=builder /app/public /app/public
 
 # Install runtime deps into standalone node_modules
-RUN npm install --prefix /app socket.io@4.7.4 @anthropic-ai/sdk nanoid sharp --no-save
+RUN npm install --prefix /app socket.io@4.7.4 @anthropic-ai/sdk nanoid sharp leaflet --no-save
 
 # Copy custom server
 COPY --from=builder /app/custom-server.js /app/custom-server.js
