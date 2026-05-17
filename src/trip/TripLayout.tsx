@@ -6,6 +6,11 @@ import { family } from "./data";
 
 // CSS variables injected into trip layout — warm airy palette
 const tripStyles = `
+  /* Override root layout's dark body for trip section */
+  body:has(.trip-root) {
+    background: linear-gradient(180deg, #F4F6FA 0%, #ECEFF6 100%) !important;
+    color: #2A3E5C !important;
+  }
   .trip-root {
     --cream:    #F4EFE3;
     --paper:    #FAF6EC;
