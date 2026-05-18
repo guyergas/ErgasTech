@@ -40,17 +40,17 @@ COPY --from=builder /app/public /app/public
 # Install runtime deps into standalone node_modules
 RUN npm install --prefix /app socket.io@4.7.4 @anthropic-ai/sdk nanoid sharp leaflet --no-save
 
-# Install Whisper with CPU-only torch (no CUDA bloat)
-RUN pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu --break-system-packages && \
-    pip install openai-whisper --no-deps --break-system-packages && \
-    pip install pydantic more-itertools numba numpy tiktoken tqdm librosa transformers safetensors --break-system-packages
+# Install Faster-Whisper (optimized, lightweight)
+# Faster-Whisper uses ONNX runtime (no torch needed) and CTransformers for speed
+RUN pip install faster-whisper numpy scipy --break-system-packages
 
 # Copy custom server
 COPY --from=builder /app/custom-server.js /app/custom-server.js
 
-# Ensure proper permissions (chown data dir too)
+# Ensure proper permissions
 RUN chown -R nextjs:nodejs /app /data
 
 USER nextjs
 EXPOSE 3000
-CMD ["node", "custom-server.js"]
+
+CMD ["node", "/app/custom-server.js"]

@@ -6,7 +6,7 @@ import path from "path";
 
 const execAsync = promisify(exec);
 
-export const maxDuration = 600; // 10 minutes in seconds
+export const maxDuration = 600; // 10 minutes
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -22,13 +22,14 @@ export async function POST(req: NextRequest) {
   try {
     let audioBuffer: ArrayBuffer;
 
-    // Check if it's a local path (starts with /trip/uploads/)
+    // Check if it's a local file path
     if (audioUrl.startsWith("/trip/uploads/")) {
       // Read directly from disk
       const localPath = path.join(process.cwd(), "public", audioUrl);
-      audioBuffer = await fs.readFile(localPath).then(buf => buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+      const fileBuffer = await fs.readFile(localPath);
+      audioBuffer = fileBuffer.buffer.slice(fileBuffer.byteOffset, fileBuffer.byteOffset + fileBuffer.byteLength);
     } else {
-      // Fetch from external URL
+      // Fetch from external URL (support both HTTP and HTTPS)
       const audioResponse = await fetch(audioUrl);
       if (!audioResponse.ok) {
         throw new Error(`Failed to fetch audio: ${audioResponse.status}`);
@@ -39,43 +40,37 @@ export async function POST(req: NextRequest) {
     // Write to temp file
     await fs.writeFile(audioFile, Buffer.from(audioBuffer));
 
-    // Use Python with transformers to transcribe
+    // Use Python with Faster-Whisper for transcription
     const pythonScript = `
 import os
 import sys
 
-# Set up environment and create cache dir BEFORE any imports
+# Set up environment
 os.environ['HF_HOME'] = '/tmp/hf_cache'
 os.environ['HOME'] = '/tmp'
 os.environ['USER'] = 'nextjs'
 os.makedirs('/tmp/hf_cache', exist_ok=True)
 
-sys.path.insert(0, '/usr/local/lib/python3.11/dist-packages')
+try:
+    from faster_whisper import WhisperModel
 
-import torch
-from transformers import AutoModelForSpeechSeq2Seq, AutoProcessor, pipeline
+    # Load model (base is 140M, much faster than large-v2)
+    model = WhisperModel("base", device="cpu", compute_type="int8")
 
-device = "cpu"
-torch_dtype = torch.float32
+    # Transcribe
+    segments, info = model.transcribe("${audioFile}", language="he", beam_size=5)
 
-print("Loading model...", file=sys.stderr)
-model = AutoModelForSpeechSeq2Seq.from_pretrained("openai/whisper-large-v2", torch_dtype=torch_dtype, use_safetensors=True)
-model.to(device)
+    # Combine segments
+    transcript = ' '.join(segment.text for segment in segments).strip()
 
-processor = AutoProcessor.from_pretrained("openai/whisper-large-v2")
-
-pipe = pipeline(
-    "automatic-speech-recognition",
-    model=model,
-    tokenizer=processor.tokenizer,
-    feature_extractor=processor.feature_extractor,
-    torch_dtype=torch_dtype,
-    device=device,
-)
-
-print("Transcribing...", file=sys.stderr)
-result = pipe("${audioFile}", return_timestamps=True)
-print(result["text"])
+    if transcript:
+        print(transcript)
+    else:
+        print("", file=sys.stderr)
+        sys.exit(1)
+except Exception as e:
+    print(f"Error: {e}", file=sys.stderr)
+    sys.exit(1)
 `;
 
     const { stdout, stderr } = await execAsync(`python3 << 'PYEOF'\n${pythonScript}\nPYEOF`, {
@@ -94,7 +89,7 @@ print(result["text"])
     // Cleanup
     try {
       await fs.unlink(audioFile);
-    } catch (e) {
+    } catch {
       // Ignore cleanup errors
     }
 
@@ -110,7 +105,7 @@ print(result["text"])
     // Cleanup on error
     try {
       await fs.unlink(audioFile);
-    } catch (e) {
+    } catch {
       // Ignore
     }
 
