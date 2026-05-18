@@ -41,39 +41,29 @@ export async function POST(req: NextRequest) {
     await fs.writeFile(audioFile, Buffer.from(audioBuffer));
 
     // Use Python with Faster-Whisper for transcription
-    const pythonScript = `
-import os
+    // Create a Python script file to avoid heredoc issues in template strings
+    const scriptFile = path.join(tmpDir, `script-${Date.now()}.py`);
+    const pythonScript = `import os
 import sys
-
-# Set up environment
 os.environ['HF_HOME'] = '/tmp/hf_cache'
 os.environ['HOME'] = '/tmp'
 os.environ['USER'] = 'nextjs'
-os.makedirs('/tmp/hf_cache', exist_ok=True)
-
 try:
     from faster_whisper import WhisperModel
-
-    # Load model (base is 140M, much faster than large-v2)
     model = WhisperModel("base", device="cpu", compute_type="int8")
-
-    # Transcribe
     segments, info = model.transcribe("${audioFile}", language="he", beam_size=5)
-
-    # Combine segments
     transcript = ' '.join(segment.text for segment in segments).strip()
-
     if transcript:
         print(transcript)
     else:
-        print("", file=sys.stderr)
         sys.exit(1)
 except Exception as e:
     print(f"Error: {e}", file=sys.stderr)
-    sys.exit(1)
-`;
+    sys.exit(1)`;
 
-    const { stdout, stderr } = await execAsync(`python3 << 'PYEOF'\n${pythonScript}\nPYEOF`, {
+    await fs.writeFile(scriptFile, pythonScript);
+
+    const { stdout, stderr } = await execAsync(`python3 "${scriptFile}"`, {
       timeout: 600000,
       maxBuffer: 10 * 1024 * 1024,
       env: {
@@ -83,6 +73,13 @@ except Exception as e:
         USER: 'nextjs'
       } as NodeJS.ProcessEnv,
     });
+
+    // Cleanup script file
+    try {
+      await fs.unlink(scriptFile);
+    } catch {
+      // Ignore
+    }
 
     const transcription = stdout.trim();
 
