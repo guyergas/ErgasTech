@@ -134,18 +134,33 @@ function ComposeForm() {
   };
 
   // ─── Audio Recording ──────────────────────────────────
+  const stopRecording = () => {
+    // Immediately stop everything
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        console.error("Error stopping recorder:", e);
+      }
+    }
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.error("Error stopping recognition:", e);
+      }
+    }
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    setRecording(false);
+    setRecordingSeconds(0);
+  };
+
   const recordAudio = async () => {
     if (recording) {
-      // Stop recording
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
-        mediaRecorderRef.current.stop();
-      }
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
-      }
-      if (timerRef.current) clearInterval(timerRef.current);
-      setRecording(false);
-      setRecordingSeconds(0);
+      stopRecording();
       return;
     }
 
@@ -492,8 +507,24 @@ function ComposeForm() {
 
         {/* Record Button */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <button onClick={recordAudio} disabled={uploadingAudio} style={{ width: 52, height: 52, borderRadius: "50%", background: recording ? "rgba(220,60,60,0.9)" : `${m.color}cc`, color: "#fff", border: "none", cursor: "pointer", fontSize: 22, display: "flex", alignItems: "center", justifyContent: "center", animation: recording ? "pulse 1s infinite" : "none" }}>
-            {recording ? "⏹" : "🎙"}
+          <button
+            onClick={() => recording ? stopRecording() : recordAudio()}
+            disabled={uploadingAudio}
+            style={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              background: recording ? "rgba(220,60,60,0.9)" : `${m.color}cc`,
+              color: "#fff",
+              border: "none",
+              cursor: uploadingAudio ? "default" : "pointer",
+              fontSize: 22,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: uploadingAudio ? 0.5 : 1
+            }}>
+            {recording ? "⏹️" : "🎙️"}
           </button>
           {recording && (
             <div style={{ fontSize: 18, fontWeight: 700, color: "var(--terra)" }}>
