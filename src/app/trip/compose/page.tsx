@@ -57,6 +57,7 @@ function ComposeForm() {
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [uploadingAudio, setUploadingAudio] = useState(false);
   const [liveTranscribe, setLiveTranscribe] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const recognitionRef = useRef<any>(null);
@@ -314,11 +315,68 @@ function ComposeForm() {
     setImproving(false);
   };
 
-  // ─── Transcribe Audio - Record Again with Live Transcription ────
-  const transcribeAudio = () => {
-    // For now, guide user to record again with live transcription
-    // Full audio file transcription requires backend service
-    setError("💡 Tip: Record your voice again and the browser will transcribe in real-time. Or type manually below.");
+  // ─── Transcribe Audio File ───────────────────────────────
+  const transcribeAudio = async () => {
+    if (!audioUrl) return;
+
+    setTranscribing(true);
+    setError("🎤 Transcribing audio...");
+
+    try {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        setError("Speech recognition not supported. Please type or use live transcription next time.");
+        setTranscribing(false);
+        return;
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = "he-IL";
+      recognition.continuous = true;
+      recognition.interimResults = false;
+
+      let fullTranscript = "";
+
+      recognition.onstart = () => {
+        setError("🎤 Listening to audio...");
+      };
+
+      recognition.onresult = (event: any) => {
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            fullTranscript += event.results[i][0].transcript + " ";
+          }
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        setError(`Transcription error: ${event.error}`);
+      };
+
+      recognition.onend = () => {
+        if (fullTranscript.trim()) {
+          setDescription(fullTranscript.trim());
+          setError(null);
+        } else {
+          setError("Could not transcribe audio. Try typing manually.");
+        }
+        setTranscribing(false);
+      };
+
+      // Fetch and play audio while transcribing
+      const audioBlob = await fetch(audioUrl).then((r) => r.blob());
+      const audioElement = new Audio();
+      audioElement.src = URL.createObjectURL(audioBlob);
+
+      recognition.start();
+      audioElement.play().catch(() => {
+        // Audio playback might fail, but transcription can still work
+      });
+    } catch (e) {
+      setError(`Transcription failed: ${e instanceof Error ? e.message : String(e)}`);
+      setTranscribing(false);
+    }
   };
 
   // ─── Publish ──────────────────────────────────────────
@@ -538,9 +596,27 @@ function ComposeForm() {
         {audioUrl && (
           <div style={{ marginTop: 12, background: `${m.color}18`, borderRadius: 12, padding: "12px 14px", border: `0.5px solid ${m.color}30` }}>
             <audio controls src={audioUrl} style={{ width: "100%", marginBottom: 10 }} />
-            <button onClick={() => setAudioUrl("")} style={{ ...buttonStyle, background: "var(--ivory)", color: "var(--ink)" }}>
-              הסר הקלטה
-            </button>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={transcribeAudio}
+                disabled={transcribing}
+                style={{
+                  ...buttonStyle,
+                  background: "var(--terra)",
+                  color: "#fff",
+                  flex: 1,
+                  opacity: transcribing ? 0.6 : 1,
+                }}
+              >
+                {transcribing ? "⏳ תמלול..." : "✦ תמלל"}
+              </button>
+              <button
+                onClick={() => setAudioUrl("")}
+                style={{ ...buttonStyle, background: "var(--ivory)", color: "var(--ink)" }}
+              >
+                הסר
+              </button>
+            </div>
           </div>
         )}
       </Section>
