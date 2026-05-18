@@ -47,8 +47,17 @@ RUN pip install faster-whisper numpy scipy --break-system-packages
 # Copy custom server
 COPY --from=builder /app/custom-server.js /app/custom-server.js
 
-# Ensure proper permissions
-RUN chown -R nextjs:nodejs /app /data
+# Pre-download Whisper base model to cache
+RUN mkdir -p /tmp/hf_cache && \
+    python3 -c "\
+import os; \
+os.environ['HF_HOME'] = '/tmp/hf_cache'; \
+from faster_whisper import WhisperModel; \
+print('Pre-loading Whisper base model...'); \
+model = WhisperModel('base', device='cpu', compute_type='int8'); \
+print('✓ Model cached successfully'); \
+" && \
+    chown -R nextjs:nodejs /tmp/hf_cache /app /data
 
 USER nextjs
 EXPOSE 3000
