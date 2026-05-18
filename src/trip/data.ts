@@ -20,6 +20,12 @@ export interface PhotoPlaceholder {
 export type PostLayout = 'hero' | 'standard' | 'voice' | 'gallery';
 export type PostType = 'text' | 'photo' | 'video' | 'voice' | 'movement';
 export type TextVersion = 'raw' | 'improved';
+export type MediaItemType = 'photo' | 'video';
+
+export interface MediaItem {
+  url: string;
+  type: MediaItemType;
+}
 
 export interface TripPost {
   id: string;
@@ -39,7 +45,9 @@ export interface TripPost {
   locationPrecision: 'general' | 'exact';
   photo?: string;
   extras?: string[];
+  mediaItems?: MediaItem[];
   audioUrl?: string;
+  audioKept?: boolean;
   transcriptRaw?: string;
   transcriptImproved?: string;
   voiceLen?: number;

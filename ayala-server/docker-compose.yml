@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  ayala-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ayala-quiz-server
+    ports:
+      - "3003:3003"
+    volumes:
+      - ./questions.json:/app/questions.json
+    restart: unless-stopped

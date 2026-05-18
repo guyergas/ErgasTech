@@ -15,6 +15,9 @@ export default function ComposePage() {
       .then((r) => r.json())
       .then((d) => setIsAdmin(d.isAdmin))
       .catch(() => setIsAdmin(false));
+
+    // Pre-warm Whisper model on page load
+    fetch("/api/trip/warmup").catch(() => {});
   }, []);
 
   if (isAdmin === null) {
@@ -56,11 +59,9 @@ function ComposeForm() {
   const [recording, setRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [uploadingAudio, setUploadingAudio] = useState(false);
-  const [liveTranscribe, setLiveTranscribe] = useState(false);
   const [transcribing, setTranscribing] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const recognitionRef = useRef<any>(null);
 
   const [locationName, setLocationName] = useState("");
   const [city, setCity] = useState("");
@@ -136,19 +137,11 @@ function ComposeForm() {
 
   // ─── Audio Recording ──────────────────────────────────
   const stopRecording = () => {
-    // Immediately stop everything
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
         mediaRecorderRef.current.stop();
       } catch (e) {
         console.error("Error stopping recorder:", e);
-      }
-    }
-    if (recognitionRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch (e) {
-        console.error("Error stopping recognition:", e);
       }
     }
     if (timerRef.current) {
@@ -183,39 +176,6 @@ function ComposeForm() {
       const mr = new MediaRecorder(stream, { mimeType: mimeType || undefined });
       const chunks: Blob[] = [];
       let seconds = 0;
-
-      // Start live transcription if enabled
-      if (liveTranscribe) {
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        if (SpeechRecognition) {
-          const recognition = new SpeechRecognition();
-          recognition.lang = "he-IL";
-          recognition.continuous = true;
-          recognition.interimResults = true;
-
-          let fullTranscript = "";
-
-          recognition.onresult = (event: any) => {
-            let interim = "";
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              const transcript = event.results[i][0].transcript;
-              if (event.results[i].isFinal) {
-                fullTranscript += transcript + " ";
-              } else {
-                interim += transcript;
-              }
-            }
-            setDescription(fullTranscript + interim);
-          };
-
-          recognition.onerror = () => {
-            // Silently ignore recognition errors
-          };
-
-          recognition.start();
-          recognitionRef.current = recognition;
-        }
-      }
 
       mr.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
@@ -320,63 +280,37 @@ function ComposeForm() {
     if (!audioUrl) return;
 
     setTranscribing(true);
-    setError("🎤 Transcribing audio...");
+    setError("🎤 Transcribing audio... please wait");
 
     try {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      // Ensure audioUrl is absolute
+      const absoluteUrl = audioUrl.startsWith("http") ? audioUrl : `${typeof window !== "undefined" ? window.location.origin : ""}${audioUrl}`;
 
-      if (!SpeechRecognition) {
-        setError("Speech recognition not supported. Please type or use live transcription next time.");
+      const res = await fetch("/api/trip/transcribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ audioUrl: absoluteUrl }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(`❌ ${data.error || "Transcription failed"}`);
         setTranscribing(false);
         return;
       }
 
-      const recognition = new SpeechRecognition();
-      recognition.lang = "he-IL";
-      recognition.continuous = true;
-      recognition.interimResults = false;
-
-      let fullTranscript = "";
-
-      recognition.onstart = () => {
-        setError("🎤 Listening to audio...");
-      };
-
-      recognition.onresult = (event: any) => {
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            fullTranscript += event.results[i][0].transcript + " ";
-          }
-        }
-      };
-
-      recognition.onerror = (event: any) => {
-        setError(`Transcription error: ${event.error}`);
-      };
-
-      recognition.onend = () => {
-        if (fullTranscript.trim()) {
-          setDescription(fullTranscript.trim());
-          setError(null);
-        } else {
-          setError("Could not transcribe audio. Try typing manually.");
-        }
-        setTranscribing(false);
-      };
-
-      // Fetch and play audio while transcribing
-      const audioBlob = await fetch(audioUrl).then((r) => r.blob());
-      const audioElement = new Audio();
-      audioElement.src = URL.createObjectURL(audioBlob);
-
-      recognition.start();
-      audioElement.play().catch(() => {
-        // Audio playback might fail, but transcription can still work
-      });
+      if (data.transcript) {
+        setDescription(data.transcript);
+        setError(null);
+      } else {
+        setError("❌ No speech detected. Try recording again.");
+      }
     } catch (e) {
-      setError(`Transcription failed: ${e instanceof Error ? e.message : String(e)}`);
-      setTranscribing(false);
+      console.error("Transcribe error:", e);
+      setError(`❌ Error: ${e instanceof Error ? e.message : String(e)}`);
     }
+    setTranscribing(false);
   };
 
   // ─── Publish ──────────────────────────────────────────
@@ -547,21 +481,6 @@ function ComposeForm() {
       {/* Audio */}
       <Section>
         <SectionLabel>הקלטה קולית</SectionLabel>
-
-        {/* Live Transcribe Toggle */}
-        <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
-          <input
-            type="checkbox"
-            id="liveTranscribe"
-            checked={liveTranscribe}
-            onChange={(e) => setLiveTranscribe(e.target.checked)}
-            disabled={recording}
-            style={{ cursor: "pointer" }}
-          />
-          <label htmlFor="liveTranscribe" style={{ fontSize: 13, color: "var(--ink-2)", cursor: "pointer" }}>
-            🎤 תמלול בזמן אמת (לעברית)
-          </label>
-        </div>
 
         {/* Record Button */}
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>

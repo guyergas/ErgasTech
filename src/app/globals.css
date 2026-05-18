@@ -161,3 +161,62 @@ a {
 html {
   scroll-padding-top: 80px;
 }
+
+/* Enhanced card hover effects */
+.group:hover {
+  @apply transition-all duration-300;
+}
+
+/* Improved button states */
+.btn-primary:active {
+  transform: translateY(-1px);
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid #00d9ff;
+  outline-offset: 2px;
+}
+
+/* Card elevation on hover */
+.group:hover {
+  @apply shadow-lg transition-shadow duration-300;
+}
+
+/* Smooth opacity transitions for hover elements */
+@media (hover: hover) {
+  a, button {
+    @apply transition-all duration-200;
+  }
+}
+
+/* Improved section spacing */
+section {
+  @apply scroll-mt-20;
+}
+
+/* Focus states for accessibility */
+:focus-visible {
+  outline: 2px solid #00d9ff;
+  outline-offset: 2px;
+}
+
+/* Skeleton animation for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -1000px 0;
+  }
+  100% {
+    background-position: 1000px 0;
+  }
+}
+
+.shimmer {
+  animation: shimmer 2s infinite;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.1) 25%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.1) 75%
+  );
+  background-size: 1000px 100%;
+}

@@ -84,9 +84,15 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 60 }}>
-      {/* Hero photo */}
+      {/* Hero media */}
       <div style={{ position: "relative" }}>
-        {post.photo && post.photo.startsWith("/") ? (
+        {post.mediaItems && post.mediaItems.length > 0 ? (
+          post.mediaItems[0].type === "video" ? (
+            <video src={post.mediaItems[0].url} controls style={{ width: "100%", height: 380, objectFit: "cover", display: "block", background: "#000" }} />
+          ) : (
+            <img src={post.mediaItems[0].url} alt={post.title} style={{ width: "100%", height: 380, objectFit: "cover", display: "block" }} />
+          )
+        ) : post.photo && post.photo.startsWith("/") ? (
           <img src={post.photo} alt={post.title} style={{ width: "100%", height: 380, objectFit: "cover", display: "block" }} />
         ) : post.photo ? (
           <PhotoPlaceholder id={post.photo} height={380} rounded={0} />
@@ -102,7 +108,7 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
           display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer",
         }}>›</button>
 
-        {post.photo && (
+        {(post.photo || (post.mediaItems && post.mediaItems.length > 0)) && (
           <div style={{ position: "absolute", bottom: 22, right: 20, left: 20, color: "#fff" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 100, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", fontSize: 12, fontWeight: 500 }}>
@@ -144,8 +150,21 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
           </div>
         )}
 
-        {/* Gallery extras */}
-        {post.extras && post.extras.length > 0 && (
+        {/* Media gallery — new unified mediaItems */}
+        {post.mediaItems && post.mediaItems.length > 1 && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 22 }}>
+            {post.mediaItems.slice(1).map((item, idx) => (
+              item.type === "video" ? (
+                <video key={idx} src={item.url} controls style={{ width: "100%", height: 130, objectFit: "cover", borderRadius: 14, background: "#000" }} />
+              ) : (
+                <img key={idx} src={item.url} alt="" style={{ width: "100%", height: 130, objectFit: "cover", borderRadius: 14 }} />
+              )
+            ))}
+          </div>
+        )}
+
+        {/* Gallery extras (legacy) */}
+        {!post.mediaItems && post.extras && post.extras.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 22 }}>
             {post.extras.map((ext) => (
               ext.startsWith("/") ? (

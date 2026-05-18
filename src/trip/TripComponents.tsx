@@ -232,26 +232,22 @@ export function PostCard({ post }: PostCardProps) {
         >
           {/* photo */}
           {post.photo && (
-            <PhotoPlaceholder
-              id={post.photo}
-              height={isHero ? 260 : 200}
-              rounded={14}
-              label
-            />
+            post.photo.startsWith("/") ? (
+              <img src={post.photo} alt={post.title} style={{ width: "100%", height: isHero ? 260 : 200, objectFit: "cover", borderRadius: 14, display: "block" }} />
+            ) : (
+              <PhotoPlaceholder id={post.photo} height={isHero ? 260 : 200} rounded={14} label />
+            )
           )}
 
           {/* gallery extras */}
           {post.extras && post.extras.length > 0 && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 6,
-                marginTop: 6,
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginTop: 6 }}>
               {post.extras.map((ext) => (
-                <PhotoPlaceholder key={ext} id={ext} height={100} rounded={10} />
+                ext.startsWith("/") ? (
+                  <img key={ext} src={ext} alt="" style={{ width: "100%", height: 100, objectFit: "cover", borderRadius: 10, display: "block" }} />
+                ) : (
+                  <PhotoPlaceholder key={ext} id={ext} height={100} rounded={10} />
+                )
               ))}
             </div>
           )}

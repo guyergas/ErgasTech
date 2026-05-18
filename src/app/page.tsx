@@ -7,8 +7,6 @@ import WhatIDo from "@/components/WhatIDo";
 import FounderIntro from "@/components/FounderIntro";
 import Problem from "@/components/Problem";
 import Solution from "@/components/Solution";
-import Services from "@/components/Services";
-import HowItWorks from "@/components/HowItWorks";
 import WhyChooseUs from "@/components/WhyChooseUs";
 import FinalCTA from "@/components/FinalCTA";
 import Footer from "@/components/Footer";
@@ -33,8 +31,6 @@ export default function Home() {
       <Problem />
       <Solution />
       <FounderIntro />
-      <Services />
-      <HowItWorks />
       <WhyChooseUs />
       <FinalCTA />
       <Footer />

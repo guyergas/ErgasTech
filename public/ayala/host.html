@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<title>מי מכיר את איילה? · מארח</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;600;700&family=Heebo:wght@300;400;500;600;700&family=Sacramento&display=swap" rel="stylesheet">
+<script src="/ayala/socket.io.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html{height:auto;overflow-anchor:none;-webkit-overflow-scrolling:touch;}body{min-height:100vh;font-family:'Heebo',sans-serif;background:#FAF6EE;color:#23375A;direction:rtl;overflow-anchor:none;-webkit-overflow-scrolling:touch;}
+
+/* ── Screens ── */
+.screen{display:none;}
+.screen.active{display:block;}
+
+/* ── Paper BG ── */
+.paper-bg{
+  min-height:100vh;
+  min-height:100svh;
+  position:relative;overflow-x:hidden;
+  background:linear-gradient(165deg,#FAF6EE 0%,#ffffff 50%,#F2F6FB 100%);
+}
+.wash-blue{position:absolute;top:-10%;right:-6%;width:400px;height:400px;background:radial-gradient(circle at 35% 35%,#D9E6F2 0%,transparent 70%);opacity:0.5;pointer-events:none;}
+.wash-gold{position:absolute;bottom:-10%;left:-6%;width:320px;height:320px;background:radial-gradient(circle at 35% 35%,#F5EAC8 0%,transparent 70%);opacity:0.45;pointer-events:none;}
+.paper-content{position:relative;z-index:1;max-width:1000px;margin:0 auto;padding:28px 24px 32px;}
+
+/* ── Logo ── */
+.quiz-logo{text-align:center;margin-bottom:12px;}
+.quiz-logo .tagline{font-size:11px;letter-spacing:4px;color:#5A6B89;text-transform:uppercase;}
+.quiz-logo .main-he{font-family:'Frank Ruhl Libre',serif;font-size:26px;font-weight:500;color:#23375A;line-height:1;}
+.quiz-logo .cursive{font-family:'Sacramento',cursive;font-size:68px;color:#3E6FA6;line-height:0.9;}
+.quiz-logo .sub-badge{display:inline-flex;align-items:center;gap:8px;font-size:11px;color:#5A6B89;letter-spacing:3px;margin-top:6px;}
+.gold-line{width:32px;height:1px;background:#C9A961;}
+
+/* ── Cards ── */
+.card{background:#fff;border-radius:20px;padding:20px;box-shadow:0 18px 40px -16px rgba(35,55,90,0.14),0 4px 12px -6px rgba(35,55,90,0.07);border:1px solid #E6EFF8;}
+
+/* ── Buttons ── */
+.btn{border-radius:14px;font-family:'Frank Ruhl Libre','Heebo',serif;font-weight:500;font-size:16px;padding:11px 24px;cursor:pointer;transition:transform .13s,box-shadow .13s;border:none;}
+.btn:hover:not(:disabled){transform:translateY(-1px);}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+.btn-blue{background:linear-gradient(170deg,#7AA8D6 0%,#3E6FA6 100%);color:#fff;border:1.5px solid #3E6FA6;box-shadow:0 10px 24px -10px rgba(35,55,90,0.32);}
+.btn-paper{background:#fff;color:#3E6FA6;border:1.5px solid #A9C6E2;}
+.btn-gold{background:linear-gradient(170deg,#E5C77A 0%,#C9A961 100%);color:#23375A;border:1.5px solid #C9A961;box-shadow:0 8px 20px -10px rgba(180,130,50,0.4);}
+.btn-danger{background:#fff;color:#B47A8C;border:1.5px solid #D9A8B8;}
+.btn-sm{font-size:13px;padding:7px 14px;border-radius:10px;}
+
+/* ── Conn ── */
+.conn{font-size:11px;text-align:center;letter-spacing:2px;margin-bottom:10px;}
+.conn-ok{color:#7A9A6E;} .conn-err{color:#B47A8C;}
+
+/* ── Lobby grid ── */
+.lobby-layout{display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:start;margin-top:16px;}
+@media(max-width:680px){.lobby-layout{grid-template-columns:1fr;}}
+.qr-card{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px;}
+.qr-frame{border-radius:16px;overflow:hidden;border:2px solid #E6EFF8;box-shadow:0 8px 24px -10px rgba(35,55,90,0.12);}
+.count-big{font-family:'Frank Ruhl Libre',serif;font-size:72px;font-weight:500;color:#3E6FA6;line-height:1;}
+.chips-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.chip{background:#E6EFF8;border:1px solid #A9C6E2;border-radius:999px;padding:3px 12px;font-size:12px;color:#3E6FA6;font-family:'Frank Ruhl Libre',serif;}
+.no-players{font-size:12px;color:#8A95AB;letter-spacing:1px;}
+
+/* ── Answer tiles (host display) ── */
+.answer-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px;}
+.ans-tile{border-radius:18px;padding:18px 14px;display:flex;align-items:center;gap:12px;font-family:'Frank Ruhl Libre',serif;font-size:18px;font-weight:500;color:#23375A;border:2px solid transparent;box-shadow:0 6px 16px -8px rgba(35,55,90,0.14);}
+.ans-tile svg{flex-shrink:0;}
+.ans-tile.correct-tile{border-color:#7A9A6E;box-shadow:0 8px 20px -8px rgba(122,154,110,0.45);}
+
+/* ── Timer ring ── */
+.timer-wrap{position:relative;display:inline-flex;}
+.timer-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Frank Ruhl Libre',serif;font-weight:500;font-size:40px;color:#3E6FA6;}
+
+/* ── Scoreboard ── */
+.sb-row{background:#fff;border:1px solid #E6EFF8;border-radius:14px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px -6px rgba(35,55,90,0.09);font-family:'Frank Ruhl Libre',serif;}
+.sb-row:nth-child(1){border-color:#C9A961;background:linear-gradient(160deg,#fff 0%,#FDF6E4 100%);}
+.sb-row:nth-child(2){border-color:#A9C6E2;background:linear-gradient(160deg,#fff 0%,#EEF4FA 100%);}
+.sb-row:nth-child(3){border-color:#D9A8B8;background:linear-gradient(160deg,#fff 0%,#FBF2F4 100%);}
+.rank-medal{font-size:22px;min-width:32px;}
+.avatar-sm{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Frank Ruhl Libre',serif;font-size:15px;border:2px solid #fff;box-shadow:0 4px 10px -4px rgba(35,55,90,0.2);flex-shrink:0;}
+
+/* ── Podium ── */
+.podium-col{display:flex;flex-direction:column;align-items:center;gap:8px;}
+.podium-block{width:120px;border-radius:14px 14px 4px 4px;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;font-size:32px;line-height:1;box-shadow:0 18px 40px -16px rgba(35,55,90,0.2);}
+
+/* ── Modal ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(35,55,90,0.5);backdrop-filter:blur(2px);z-index:200;align-items:center;justify-content:center;padding:16px;}
+.modal-overlay.open{display:flex;}
+.modal{background:#FAF6EE;border-radius:22px;padding:26px 22px;width:100%;max-width:680px;max-height:90vh;overflow-y:auto;position:relative;border:1px solid #E6EFF8;box-shadow:0 28px 60px -20px rgba(35,55,90,0.28);}
+.modal-title{font-family:'Frank Ruhl Libre',serif;font-size:22px;font-weight:500;color:#23375A;margin-bottom:16px;}
+.modal-close{position:absolute;top:16px;left:16px;background:transparent;border:none;color:#8A95AB;font-size:20px;cursor:pointer;}
+.modal-close:hover{color:#23375A;}
+.global-row{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #E6EFF8;border-radius:12px;padding:12px 16px;margin-bottom:14px;}
+.global-row label{flex:1;font-size:13px;color:#5A6B89;}
+.global-row input{width:70px;padding:7px 10px;border-radius:8px;border:1.5px solid #A9C6E2;background:#FAF6EE;color:#23375A;font-size:15px;font-family:'Heebo',sans-serif;outline:none;text-align:center;}
+.global-row input:focus{border-color:#3E6FA6;}
+.q-list{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
+.q-item{background:#fff;border:1px solid #E6EFF8;border-radius:12px;overflow:hidden;}
+.q-row-li{display:flex;align-items:center;gap:10px;padding:10px 14px;}
+.q-num-badge{width:24px;height:24px;border-radius:50%;background:linear-gradient(160deg,#7AA8D6,#3E6FA6);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11px;color:#fff;flex-shrink:0;}
+.q-preview{flex:1;font-size:14px;color:#23375A;font-family:'Frank Ruhl Libre',serif;}
+.q-time-badge{color:#8A95AB;font-size:12px;min-width:28px;}
+.icon-btn{background:transparent;border:none;color:#8A95AB;font-size:14px;cursor:pointer;padding:4px 6px;border-radius:6px;}
+.icon-btn:hover{color:#23375A;background:#F0F0F0;}
+.editor{padding:14px;display:flex;flex-direction:column;gap:10px;border-top:1px solid #E6EFF8;}
+.ed-row{display:flex;align-items:center;gap:10px;}
+.ed-label{font-size:13px;color:#5A6B89;min-width:76px;text-align:right;flex-shrink:0;}
+.ed-input{flex:1;padding:8px 12px;border-radius:10px;border:1.5px solid #A9C6E2;background:#FAF6EE;color:#23375A;font-size:14px;font-family:'Heebo',sans-serif;outline:none;}
+.ed-input:focus{border-color:#3E6FA6;}
+.correct-btn{padding:6px 12px;border-radius:8px;border:1.5px solid #A9C6E2;font-size:12px;cursor:pointer;font-weight:500;min-width:72px;font-family:'Heebo',sans-serif;background:#fff;color:#5A6B89;transition:all .13s;}
+.correct-btn.active{background:#7A9A6E;border-color:#7A9A6E;color:#fff;}
+.btn-row{display:flex;gap:8px;justify-content:flex-start;margin-top:4px;}
+</style>
+</head>
+<body>
+
+<!-- ── LOBBY ── -->
+<div id="screen-lobby" class="screen active">
+  <div class="paper-bg">
+    <div class="wash-blue"></div><div class="wash-gold"></div>
+    <div class="paper-content">
+
+      <!-- Logo -->
+      <div class="quiz-logo">
+        <div id="logo-sprig-tl" style="position:absolute;top:-14px;left:-14px;pointer-events:none;"></div>
+        <div class="tagline">חידון בת המצווה</div>
+        <!-- Ayala photo -->
+        <div style="margin:10px auto;width:96px;height:96px;border-radius:50%;overflow:hidden;border:3px solid #A9C6E2;box-shadow:0 8px 24px -10px rgba(35,55,90,0.2);">
+          <img src="/ayala/ayala.jpg" alt="איילה" width="96" height="96" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block;"/>
+        </div>
+        <div class="main-he">מי מכיר את</div>
+        <div class="cursive">איילה?</div>
+        <div class="sub-badge"><div class="gold-line"></div><span id="logo-heart"></span><div class="gold-line"></div></div>
+      </div>
+
+      <p class="conn" id="conn-status">מתחבר...</p>
+
+      <div class="lobby-layout">
+        <!-- QR card -->
+        <div class="card qr-card">
+          <div style="font-family:'Frank Ruhl Libre',serif;font-size:13px;color:#5A6B89;letter-spacing:2px;">סרקו להצטרף</div>
+          <div class="qr-frame" style="width:220px;height:220px;"><img id="qr-img" src="" alt="QR" width="220" height="220" style="display:block;"/></div>
+          <div style="font-size:12px;color:#5A6B89;text-align:center;word-break:break-all;line-height:1.4;" id="qr-url"></div>
+        </div>
+
+        <!-- Right col -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="card" style="text-align:center;padding:16px 20px;">
+            <div style="font-size:11px;color:#5A6B89;letter-spacing:3px;margin-bottom:2px;">הצטרפו עד עכשיו</div>
+            <div class="count-big" id="player-count">0</div>
+            <div style="font-size:12px;color:#8A95AB;">שחקנים</div>
+          </div>
+          <div class="card" style="padding:14px 18px;">
+            <div style="font-size:11px;color:#5A6B89;letter-spacing:2px;margin-bottom:8px;">שמות שנרשמו</div>
+            <div class="chips-wrap" id="player-chips"><span class="no-players">ממתינים לשחקנות...</span></div>
+          </div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <button class="btn btn-paper btn-sm" onclick="openSetup()">⚙ שאלות</button>
+            <button class="btn btn-danger btn-sm" onclick="hostReset()">↺ איפוס</button>
+            <button class="btn btn-blue" id="start-btn" onclick="hostStart()" disabled style="flex:1;">▶ התחילי!</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ── QUESTION ── -->
+<div id="screen-question" class="screen">
+  <div class="paper-bg">
+    <div class="wash-blue"></div>
+    <div class="paper-content" style="padding-top:20px;">
+
+      <!-- Top bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <div style="font-size:12px;color:#5A6B89;letter-spacing:3px;" id="q-counter">שאלה 1/15</div>
+        <!-- Timer ring -->
+        <div class="timer-wrap">
+          <svg id="timer-svg" width="90" height="90" style="transform:rotate(-90deg)">
+            <circle cx="45" cy="45" r="36" fill="none" stroke="#E6EFF8" stroke-width="7"/>
+            <circle id="timer-arc" cx="45" cy="45" r="36" fill="none" stroke="#3E6FA6" stroke-width="7" stroke-linecap="round"
+              stroke-dasharray="226.2" stroke-dashoffset="0" style="transition:stroke-dashoffset .9s linear"/>
+          </svg>
+          <div class="timer-num" id="timer-num">20</div>
+        </div>
+        <div style="font-size:12px;color:#5A6B89;letter-spacing:2px;" id="answers-count">0 ענו</div>
+      </div>
+
+      <!-- Question text -->
+      <div class="card" style="text-align:center;padding:22px 20px;margin-bottom:4px;">
+        <div style="font-family:'Frank Ruhl Libre',serif;font-size:28px;font-weight:500;color:#23375A;line-height:1.35;" id="q-text-big"></div>
+      </div>
+
+      <!-- Answers -->
+      <div class="answer-grid" id="answers-big"></div>
+
+      <!-- Action -->
+      <div style="margin-top:18px;text-align:center;">
+        <button class="btn btn-danger btn-sm" onclick="hostEndQuestion()">⏹ סיים שאלה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCOREBOARD ── -->
+<div id="screen-scoreboard" class="screen">
+  <div class="paper-bg">
+    <div class="wash-blue"></div><div class="wash-gold"></div>
+    <div class="paper-content">
+      <div class="quiz-logo" style="margin-bottom:16px;">
+        <div class="main-he" style="font-size:20px;">לוח התוצאות</div>
+        <div class="cursive" style="font-size:50px;">אחרי שאלה <span id="sb-qnum">1</span></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;" id="score-list"></div>
+      <div style="text-align:center;margin-top:20px;">
+        <button class="btn btn-blue" id="next-btn" onclick="hostNext()">▶ שאלה הבאה</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PODIUM ── -->
+<div id="screen-podium" class="screen">
+  <div class="paper-bg" style="background:linear-gradient(165deg,#FAF6EE 0%,#F5EAC8 60%,#E6EFF8 100%);">
+    <div class="wash-blue"></div><div class="wash-gold"></div>
+    <div class="paper-content" style="text-align:center;">
+      <div style="margin-bottom:6px;" id="podium-heart"></div>
+      <div class="quiz-logo" style="margin-bottom:20px;">
+        <div class="main-he" style="font-size:20px;">מזל טוב לאיילה!</div>
+        <div class="cursive" style="font-size:60px;">🏆 הפודיום הסופי</div>
+      </div>
+      <div style="display:flex;justify-content:center;align-items:flex-end;gap:16px;margin-bottom:28px;" id="podium-wrap"></div>
+      <div style="display:flex;flex-direction:column;gap:8px;max-width:520px;margin:0 auto;" id="final-score-list"></div>
+      <div style="margin-top:28px;">
+        <button class="btn btn-danger" onclick="hostReset()">↺ איפוס ומשחק חדש</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SETUP MODAL ── -->
+<div class="modal-overlay" id="setup-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeSetup()">✕</button>
+    <div class="modal-title">⚙ ניהול שאלות</div>
+    <div class="global-row">
+      <label>זמן לכל שאלה (שניות)</label>
+      <input type="number" id="global-time" min="5" max="120" value="20"/>
+    </div>
+    <div class="q-list" id="q-list"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-paper btn-sm" onclick="addQuestion()">+ הוסף שאלה</button>
+      <button class="btn btn-gold btn-sm" onclick="saveAndClose()">💾 שמור וסגור</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ANSWER_COLORS = [
+  {bg:'#D9A8B8', deep:'#B47A8C', name:'rose'},
+  {bg:'#7AA8D6', deep:'#3E6FA6', name:'blue'},
+  {bg:'#E5C77A', deep:'#B8943F', name:'gold'},
+  {bg:'#A8BFA1', deep:'#7A9A6E', name:'sage'},
+];
+
+const SHAPES = [
+  `<svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 20 C 6 16, 2 12, 3 8 C 4 5, 7 4, 9 5.5 C 10 6.5, 11 7.5, 12 8.5 C 13 7.5, 14 6.5, 15 5.5 C 17 4, 20 5, 21 8 C 22 12, 18 16, 12 20 Z" fill="currentColor"/></svg>`,
+  `<svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 3 C 6 5, 4 11, 5 18 C 11 19, 18 16, 19 9 C 19 5, 16 3, 12 3 Z" fill="currentColor"/></svg>`,
+  `<svg viewBox="0 0 24 24" width="28" height="28"><g fill="currentColor"><ellipse cx="12" cy="6" rx="3" ry="4.5"/><ellipse cx="12" cy="18" rx="3" ry="4.5"/><ellipse cx="6" cy="12" rx="4.5" ry="3"/><ellipse cx="18" cy="12" rx="4.5" ry="3"/></g></svg>`,
+  `<svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 2 L14 9 L22 10 L16 15 L18 22 L12 18 L6 22 L8 15 L2 10 L10 9 Z" fill="currentColor"/></svg>`,
+];
+
+function heartSvg(size, color, fill='none', sw=1.5){
+  return `<svg viewBox="0 0 32 32" width="${size}" height="${size}"><path d="M16 27 C 8 22, 3 16, 4 11 C 5 7, 9 5, 12 7 C 14 8, 15 10, 16 12 C 17 10, 18 8, 20 7 C 23 5, 27 7, 28 11 C 29 16, 24 22, 16 27 Z" fill="${fill}" stroke="${color}" stroke-width="${sw}" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+function leafSprigSvg(size){
+  return `<svg viewBox="0 0 200 200" width="${size}" height="${size}" style="display:block;opacity:0.5"><path d="M30 170 C 80 130, 130 70, 180 30" stroke="#7AA8D6" stroke-width="1.4" fill="none"/><circle cx="152" cy="42" r="2" fill="#C9A961" opacity="0.8"/><circle cx="100" cy="96" r="1.5" fill="#C9A961" opacity="0.7"/><circle cx="68" cy="128" r="1.5" fill="#C9A961" opacity="0.7"/></svg>`;
+}
+
+function avatarBg(hue){return `linear-gradient(160deg, hsl(${hue} 40% 78%) 0%, hsl(${(hue+30)%360} 45% 62%) 100%)`;}
+function pickHue(nick){let h=0;for(let i=0;i<nick.length;i++) h=(h*37+nick.charCodeAt(i))%360;return h;}
+
+// Decorations
+document.getElementById('logo-heart').innerHTML = heartSvg(18,'#C9A961');
+document.getElementById('podium-heart').innerHTML = heartSvg(52,'#C9A961','#F5EAC8',1.5);
+
+// ── State ────────────────────────────────────────────────────────────────────
+let questions = [];
+let editingIdx = null;
+let currentQIndex = 0;
+let totalQs = 0;
+let currentQTime = 20;
+let answeredCount = 0;
+
+// ── Socket ───────────────────────────────────────────────────────────────────
+const socket = io({ path: '/ayala-socket' });
+
+socket.on('connect', () => {
+  setConnStatus(true);
+  socket.emit('host_join');
+  buildQr();
+});
+socket.on('disconnect', () => setConnStatus(false));
+socket.on('connect_error', () => setConnStatus(false));
+
+function setConnStatus(ok){
+  const el = document.getElementById('conn-status');
+  el.textContent = ok ? '✓ מחוברת לשרת' : '✗ מתחברת...';
+  el.className = 'conn ' + (ok ? 'conn-ok' : 'conn-err');
+}
+
+socket.on('questions_loaded', ({questions:qs, globalTime}) => {
+  questions = qs;
+  if (globalTime) document.getElementById('global-time').value = globalTime;
+});
+
+socket.on('lobby_update', ({playerCount, players}) => {
+  const sy = window.scrollY;
+  document.getElementById('player-count').textContent = playerCount;
+  const chips = document.getElementById('player-chips');
+  chips.innerHTML = players.length
+    ? players.map(p=>`<span class="chip">${p}</span>`).join('')
+    : '<span class="no-players">ממתינות להצטרף...</span>';
+  document.getElementById('start-btn').disabled = playerCount < 1;
+  window.scrollTo({top: sy, behavior: 'instant'});
+});
+
+socket.on('question_start', (data) => {
+  currentQIndex = data.questionIndex;
+  totalQs = data.total;
+  currentQTime = data.time;
+  answeredCount = 0;
+  showQuestionScreen(data);
+});
+
+socket.on('player_answered', ({answeredCount: cnt}) => {
+  answeredCount = cnt;
+  document.getElementById('answers-count').textContent = `${cnt} ענו`;
+});
+
+socket.on('timer_tick', ({timeLeft}) => updateTimer(timeLeft, currentQTime));
+
+socket.on('question_ended', ({correctIndex, scoreboard}) => {
+  showScoreboard(scoreboard, correctIndex);
+});
+
+socket.on('game_over', ({scoreboard}) => { showPodium(scoreboard); });
+
+socket.on('game_reset', () => { showScreen('lobby'); });
+
+// ── Host actions ──────────────────────────────────────────────────────────────
+function hostStart(){ socket.emit('host_start'); }
+function hostNext(){ socket.emit('host_next'); }
+function hostEndQuestion(){ socket.emit('host_end_question'); }
+function hostReset(){ socket.emit('host_reset'); }
+
+// ── QR ────────────────────────────────────────────────────────────────────────
+function buildQr(){
+  const guestUrl = window.location.origin + '/ayala/guest.html';
+  document.getElementById('qr-img').src =
+    'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' +
+    encodeURIComponent(guestUrl) + '&bgcolor=FAF6EE&color=23375A&margin=2';
+  document.getElementById('qr-url').textContent = window.location.host + '/ayala/guest.html';
+}
+
+// ── Screens ───────────────────────────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+}
+
+function showQuestionScreen(data){
+  document.getElementById('q-counter').textContent = `שאלה ${data.questionIndex+1}/${data.total}`;
+  document.getElementById('answers-count').textContent = '0 ענו';
+  document.getElementById('q-text-big').textContent = data.question;
+  document.getElementById('answers-big').innerHTML = data.answers.map((a,i)=>`
+    <div class="ans-tile" style="background:${ANSWER_COLORS[i].bg};">
+      <span style="color:${ANSWER_COLORS[i].deep};">${SHAPES[i]}</span>
+      <span>${a}</span>
+    </div>`).join('');
+  const start = data.timeLeft !== undefined ? data.timeLeft : data.time;
+  updateTimer(start, data.time);
+  showScreen('question');
+}
+
+function updateTimer(left, total){
+  const pct = Math.max(0, left/total);
+  const c = 2*Math.PI*36;
+  document.getElementById('timer-arc').style.strokeDashoffset = c*(1-pct);
+  const color = left > total*0.4 ? '#3E6FA6' : left > total*0.2 ? '#C9A961' : '#B47A8C';
+  document.getElementById('timer-arc').style.stroke = color;
+  document.getElementById('timer-num').style.color = color;
+  document.getElementById('timer-num').textContent = Math.ceil(left);
+}
+
+function showScoreboard(scores, correctIndex){
+  document.getElementById('sb-qnum').textContent = currentQIndex+1;
+  // Highlight correct answer on question screen first
+  document.querySelectorAll('#answers-big .ans-tile').forEach((el,i)=>{
+    if(i===correctIndex) el.classList.add('correct-tile');
+    else el.style.opacity='0.45';
+  });
+
+  const medals = ['🥇','🥈','🥉'];
+  document.getElementById('score-list').innerHTML = scores.slice(0,10).map((e,i)=>`
+    <div class="sb-row">
+      <span class="rank-medal">${i<3?medals[i]:i+1}</span>
+      <div class="avatar-sm" style="background:${avatarBg(pickHue(e.nickname))}">${e.nickname.slice(0,1).toUpperCase()}</div>
+      <span style="flex:1;font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:500;">${e.nickname}</span>
+      <span style="font-family:'Frank Ruhl Libre',serif;font-size:18px;font-weight:500;color:#3E6FA6;">${e.score.toLocaleString('he-IL')}</span>
+    </div>`).join('');
+  const isLast = currentQIndex >= totalQs - 1;
+  document.getElementById('next-btn').textContent = isLast ? '🏆 הפודיום הסופי' : '▶ שאלה הבאה';
+  showScreen('scoreboard');
+}
+
+function showPodium(scores){
+  const top3 = scores.slice(0,3);
+  const order = [top3[1]||null, top3[0]||null, top3[2]||null];
+  const heights = [120, 160, 90];
+  const bgColors = ['linear-gradient(170deg,#A9C6E2,#7AA8D6)','linear-gradient(170deg,#E5C77A,#C9A961)','linear-gradient(170deg,#D9A8B8,#B47A8C)'];
+  const labels = ['2','1','3'];
+  document.getElementById('podium-wrap').innerHTML = order.map((p,i) => p ? `
+    <div class="podium-col">
+      <div class="avatar-sm" style="width:52px;height:52px;font-size:22px;background:${avatarBg(pickHue(p.nickname))}">${p.nickname.slice(0,1).toUpperCase()}</div>
+      <div style="font-family:'Frank Ruhl Libre',serif;font-size:14px;font-weight:500;">${p.nickname}</div>
+      <div style="font-size:11px;color:#5A6B89;">${p.score.toLocaleString('he-IL')}</div>
+      <div class="podium-block" style="height:${heights[i]}px;background:${bgColors[i]};width:110px;">${labels[i]}</div>
+    </div>` : '').join('');
+  document.getElementById('final-score-list').innerHTML = scores.map((e,i)=>`
+    <div class="sb-row">
+      <span class="rank-medal">${i<3?['🥇','🥈','🥉'][i]:i+1}</span>
+      <div class="avatar-sm" style="background:${avatarBg(pickHue(e.nickname))}">${e.nickname.slice(0,1).toUpperCase()}</div>
+      <span style="flex:1;font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:500;">${e.nickname}</span>
+      <span style="font-family:'Frank Ruhl Libre',serif;font-size:18px;font-weight:500;color:#3E6FA6;">${e.score.toLocaleString('he-IL')}</span>
+    </div>`).join('');
+  showScreen('podium');
+}
+
+// ── Setup modal ───────────────────────────────────────────────────────────────
+function openSetup(){ document.getElementById('setup-modal').classList.add('open'); renderQuestions(); }
+function closeSetup(){ document.getElementById('setup-modal').classList.remove('open'); }
+document.addEventListener('click', e => { if(e.target.id==='setup-modal') closeSetup(); });
+
+function saveAndClose(){
+  const globalTime = parseInt(document.getElementById('global-time').value)||20;
+  socket.emit('save_questions', { questions, globalTime });
+  closeSetup();
+}
+
+function applyGlobalTime(){
+  // No-op — global time is applied on save
+}
+
+function renderQuestions(){
+  const list = document.getElementById('q-list');
+  list.innerHTML = '';
+  questions.forEach((q,idx)=>{
+    const item = document.createElement('div');
+    item.className = 'q-item';
+    item.innerHTML = editingIdx===idx ? buildEditor(q,idx) : buildRow(q,idx);
+    list.appendChild(item);
+  });
+}
+
+function buildRow(q,idx){
+  return `<div class="q-row-li">
+    <div class="q-num-badge">${idx+1}</div>
+    <div class="q-preview">${q.question||'(ריק)'}</div>
+    <div style="display:flex;gap:2px;">
+      <button class="icon-btn" onclick="moveQ(${idx},-1)">▲</button>
+      <button class="icon-btn" onclick="moveQ(${idx},1)">▼</button>
+      <button class="icon-btn" onclick="editQ(${idx})">✏</button>
+      <button class="icon-btn" style="color:#B47A8C" onclick="deleteQ(${idx})">✕</button>
+    </div>
+  </div>`;
+}
+
+function buildEditor(q,idx){
+  const ansRows = q.answers.map((a,ai)=>`
+    <div class="ed-row">
+      <label class="ed-label" style="color:${ANSWER_COLORS[ai].deep}">${ai+1}</label>
+      <input class="ed-input" id="ans-${idx}-${ai}" value="${escHtml(a)}" dir="rtl"/>
+      <button class="correct-btn${q.correct===ai?' active':''}" id="correct-${idx}-${ai}" onclick="setCorrect(${idx},${ai})">
+        ${q.correct===ai?'✓ נכון':'נכון?'}
+      </button>
+    </div>`).join('');
+  return `<div class="editor">
+    <div class="ed-row">
+      <label class="ed-label">שאלה</label>
+      <input class="ed-input" id="q-text-${idx}" value="${escHtml(q.question)}" dir="rtl" placeholder="כתבי את השאלה…"/>
+    </div>
+    ${ansRows}
+    <div class="btn-row">
+      <button class="btn btn-gold btn-sm" onclick="saveEdit(${idx})">שמור</button>
+      <button class="btn btn-paper btn-sm" onclick="cancelEdit()">ביטול</button>
+    </div>
+  </div>`;
+}
+
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function setCorrect(qIdx,aIdx){
+  questions[qIdx].correct = aIdx;
+  questions[qIdx].answers.forEach((_,ai)=>{
+    const btn = document.getElementById(`correct-${qIdx}-${ai}`);
+    if(btn){ btn.className = 'correct-btn'+(ai===aIdx?' active':''); btn.textContent = ai===aIdx?'✓ נכון':'נכון?'; }
+  });
+}
+function saveEdit(idx){
+  questions[idx].question = document.getElementById(`q-text-${idx}`).value.trim();
+  questions[idx].answers = [0,1,2,3].map(ai=>document.getElementById(`ans-${idx}-${ai}`).value.trim());
+  editingIdx=null; renderQuestions();
+}
+function cancelEdit(){ editingIdx=null; renderQuestions(); }
+function editQ(idx){ editingIdx=idx; renderQuestions(); }
+function deleteQ(idx){ questions.splice(idx,1); if(editingIdx===idx) editingIdx=null; renderQuestions(); }
+function moveQ(idx,dir){
+  const t=idx+dir;
+  if(t<0||t>=questions.length) return;
+  [questions[idx],questions[t]]=[questions[t],questions[idx]];
+  renderQuestions();
+}
+function addQuestion(){
+  questions.push({id:Date.now(),question:'',answers:['','','',''],correct:0,time:20});
+  editingIdx=questions.length-1;
+  renderQuestions();
+  document.getElementById('q-list').lastElementChild?.scrollIntoView({behavior:'smooth'});
+}
+</script>
+</body>
+</html>

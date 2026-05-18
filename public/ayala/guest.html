@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>מי מכיר את איילה? · חידון בת המצווה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Frank+Ruhl+Libre:wght@400;500;600;700&family=Heebo:wght@300;400;500;600;700&family=Sacramento&display=swap" rel="stylesheet">
+<script src="/ayala/socket.io.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;font-family:'Heebo',sans-serif;background:#FAF6EE;color:#23375A;direction:rtl;}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1}50%{transform:scale(1.4);opacity:0.6}}
+@keyframes popIn{0%{transform:scale(0.5) translateY(8px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+/* ── Screens ── */
+.screen{display:none;min-height:100vh;}
+.screen.active{display:flex;flex-direction:column;}
+
+/* ── Paper BG ── */
+.paper-bg{
+  position:relative;overflow:hidden;
+  background:linear-gradient(165deg,#FAF6EE 0%,#ffffff 50%,#F2F6FB 100%);
+  flex:1;
+}
+.paper-bg .decor-tl{position:absolute;top:-14px;left:-14px;z-index:0;pointer-events:none;}
+.paper-bg .decor-br{position:absolute;bottom:-20px;right:-20px;z-index:0;pointer-events:none;transform:rotate(160deg);}
+.paper-bg .wash-blue{position:absolute;top:-12%;right:-8%;width:320px;height:320px;background:radial-gradient(circle at 35% 35%,#D9E6F2 0%,transparent 70%);opacity:0.5;pointer-events:none;}
+.paper-bg .wash-gold{position:absolute;bottom:-10%;left:-8%;width:260px;height:260px;background:radial-gradient(circle at 35% 35%,#F5EAC8 0%,transparent 70%);opacity:0.45;pointer-events:none;}
+.paper-bg .inner{position:relative;z-index:1;height:100%;}
+
+/* ── Typography ── */
+.f-serif{font-family:'Frank Ruhl Libre',serif;}
+.f-cursive{font-family:'Sacramento',cursive;}
+.f-sans{font-family:'Heebo',sans-serif;}
+
+/* ── Answer tiles ── */
+.tile-grid{display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:10px;flex:1;padding:12px;}
+.tile{border-radius:22px;border:2px solid transparent;cursor:pointer;position:relative;display:flex;align-items:center;justify-content:center;transition:transform .15s,box-shadow .15s;-webkit-tap-highlight-color:transparent;}
+.tile svg{pointer-events:none;}
+.tile.selected{transform:scale(1.03);}
+.tile.dimmed{opacity:0.35;}
+.tile.disabled{cursor:default;}
+.tile .check-badge{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;box-shadow:0 4px 10px rgba(35,55,90,0.2);}
+
+/* ── Timer ring ── */
+.timer-wrap{position:relative;display:inline-flex;}
+.timer-wrap .timer-num{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Frank Ruhl Libre',serif;font-weight:500;}
+
+/* ── Score card ── */
+.score-card{background:#fff;border-radius:20px;padding:16px;box-shadow:0 18px 40px -16px rgba(35,55,90,0.18),0 4px 12px -6px rgba(35,55,90,0.08);border:1px solid #E6EFF8;}
+.rank-delta{border-radius:10px;padding:7px 12px;font-size:12px;font-family:'Frank Ruhl Libre',serif;font-weight:500;display:flex;justify-content:space-between;letter-spacing:1px;}
+
+/* ── Scoreboard list ── */
+.sb-row{background:#fff;border:1px solid #E6EFF8;border-radius:14px;padding:10px 14px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 12px -6px rgba(35,55,90,0.1);font-family:'Frank Ruhl Libre',serif;}
+.sb-row.me{border-color:#C9A961;}
+
+/* ── Elegant button ── */
+.btn{border-radius:16px;font-family:'Frank Ruhl Libre','Heebo',serif;font-weight:500;letter-spacing:0.5px;cursor:pointer;transition:transform .15s,box-shadow .15s;border:none;}
+.btn:hover:not(:disabled){transform:translateY(-1px);}
+.btn:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-blue{background:linear-gradient(170deg,#7AA8D6 0%,#3E6FA6 100%);color:#fff;border:1.5px solid #3E6FA6;box-shadow:0 10px 24px -10px rgba(35,55,90,0.35);}
+.btn-paper{background:#fff;color:#3E6FA6;border:1.5px solid #A9C6E2;box-shadow:0 6px 16px -8px rgba(35,55,90,0.18);}
+
+/* ── Input ── */
+.nick-input{width:100%;font-family:'Frank Ruhl Libre',serif;font-weight:500;font-size:22px;text-align:center;padding:14px 12px;border:1.5px solid #A9C6E2;border-radius:14px;color:#23375A;background:#FAF6EE;outline:none;}
+.nick-input:focus{border-color:#3E6FA6;}
+
+/* ── Avatar ── */
+.avatar{border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-family:'Frank Ruhl Libre',serif;font-weight:500;border:2px solid #fff;box-shadow:0 4px 10px -4px rgba(35,55,90,0.25);flex-shrink:0;}
+
+/* ── Conn status ── */
+.conn{font-size:12px;text-align:center;letter-spacing:1px;}
+.conn-ok{color:#7A9A6E;} .conn-err{color:#B47A8C;}
+
+/* ── Podium ── */
+.podium-block{border-radius:14px 14px 4px 4px;display:flex;align-items:flex-start;justify-content:center;padding-top:12px;font-family:'Frank Ruhl Libre',serif;font-weight:500;color:#fff;font-size:40px;line-height:1;box-shadow:0 18px 40px -16px rgba(35,55,90,0.28);}
+</style>
+</head>
+<body>
+
+<!-- ── LOGIN ── -->
+<div id="screen-login" class="screen active">
+  <div class="paper-bg" style="min-height:100vh;">
+    <div class="wash-blue"></div><div class="wash-gold"></div>
+    <div class="decor-tl" id="login-tl"></div>
+    <div class="decor-br" id="login-br"></div>
+    <div class="inner" style="display:flex;flex-direction:column;padding:36px 22px 28px;align-items:center;justify-content:space-between;min-height:100vh;">
+
+      <!-- Hero -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:16px;">
+        <div style="display:flex;align-items:center;gap:10px;color:#5A6B89;font-size:12px;letter-spacing:4px;">
+          <div style="width:28px;height:1px;background:#C9A961;"></div>
+          הנכם מוזמנים
+          <div style="width:28px;height:1px;background:#C9A961;"></div>
+        </div>
+        <!-- Ayala photo -->
+        <div style="margin:8px 0;width:100px;height:100px;border-radius:50%;overflow:hidden;border:3px solid #A9C6E2;box-shadow:0 8px 24px -10px rgba(35,55,90,0.22);">
+          <img src="/ayala/ayala.jpg" alt="איילה" style="width:100%;height:100%;object-fit:cover;object-position:center top;"/>
+        </div>
+        <div class="f-serif" style="font-size:32px;font-weight:500;color:#23375A;margin-top:4px;letter-spacing:1px;">מי מכיר את</div>
+        <div class="f-cursive" style="font-size:74px;color:#3E6FA6;line-height:0.9;margin-top:-4px;">איילה?</div>
+        <div id="heart-login" style="margin-top:6px;"></div>
+        <div style="color:#5A6B89;font-size:12px;letter-spacing:4px;margin-top:4px;">חידון בת המצווה</div>
+      </div>
+
+      <!-- Card -->
+      <div style="width:100%;background:#fff;border-radius:20px;padding:24px 22px 20px;box-shadow:0 18px 40px -16px rgba(35,55,90,0.18),0 4px 12px -6px rgba(35,55,90,0.08);border:1px solid #E6EFF8;display:flex;flex-direction:column;gap:14px;position:relative;">
+        <div style="position:absolute;top:10px;right:10px;opacity:0.6;" id="card-leaf-tr"></div>
+        <div style="position:absolute;bottom:10px;left:10px;opacity:0.6;transform:rotate(180deg);" id="card-leaf-bl"></div>
+        <div class="f-serif" style="font-size:21px;font-weight:500;text-align:center;">בחרו לכם כינוי</div>
+        <div style="color:#5A6B89;font-size:13px;text-align:center;margin-top:-8px;">ככה תופיעו בלוח התוצאות</div>
+        <p class="conn" id="conn-status">מתחבר...</p>
+        <input class="nick-input" id="nick-input" placeholder="הכינוי שלך…" maxlength="16" dir="rtl"/>
+        <button class="btn btn-blue" id="join-btn" style="font-size:19px;padding:14px 30px;width:100%;" onclick="joinGame()" disabled>
+          הצטרפי לחידון
+        </button>
+        <div style="color:#8A95AB;font-size:11px;text-align:center;letter-spacing:0.3px;">
+          רמז: ככל שעונים מהר יותר על תשובה נכונה — מקבלים יותר נקודות ⚡
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="color:#5A6B89;font-size:11px;text-align:center;letter-spacing:3px;display:flex;align-items:center;gap:10px;">
+        <div style="width:18px;height:1px;background:#C9A961;"></div>
+        <span id="login-q-count">שאלות</span> · רק על איילה
+        <div style="width:18px;height:1px;background:#C9A961;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── LOBBY ── -->
+<div id="screen-lobby" class="screen">
+  <div class="paper-bg" style="min-height:100vh;flex:1;">
+    <div class="wash-blue"></div><div class="wash-gold"></div>
+    <div class="inner" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px;text-align:center;min-height:100vh;">
+      <!-- Ayala photo in lobby -->
+      <div style="width:86px;height:86px;border-radius:50%;overflow:hidden;border:3px solid #A9C6E2;box-shadow:0 8px 24px -10px rgba(35,55,90,0.2);">
+        <img src="/ayala/ayala.jpg" alt="איילה" style="width:100%;height:100%;object-fit:cover;object-position:center top;"/>
+      </div>
+      <div>
+        <div style="color:#5A6B89;font-size:11px;letter-spacing:4px;">הצטרפת בתור</div>
+        <div class="f-cursive" style="font-size:44px;color:#3E6FA6;line-height:1;margin-top:2px;" id="lobby-nick"></div>
+      </div>
+      <div style="background:#fff;border-radius:18px;padding:14px 22px;font-family:'Frank Ruhl Libre',serif;font-size:15px;color:#23375A;line-height:1.5;border:1px solid #E6EFF8;box-shadow:0 8px 24px -10px rgba(35,55,90,0.12);">
+        את בפנים <span id="heart-lobby"></span><br/>איילה תתחיל את החידון בעוד רגע
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:#5A6B89;letter-spacing:1px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:#7A9A6E;animation:pulse 1.4s infinite;"></div>
+        ממתינים…
+      </div>
+      <div style="color:#5A6B89;font-size:13px;" id="score-lobby">ניקוד: 0</div>
+      <div style="color:#8A95AB;font-size:11px;letter-spacing:3px;display:flex;align-items:center;gap:8px;">
+        <div style="width:16px;height:1px;background:#C9A961;"></div>
+        <span id="lobby-q-count">שאלות</span> · רק על איילה
+        <div style="width:16px;height:1px;background:#C9A961;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── QUESTION ── -->
+<div id="screen-question" class="screen">
+  <div class="paper-bg" style="min-height:100vh;flex:1;">
+    <div class="wash-blue"></div>
+    <div class="inner" style="display:flex;flex-direction:column;padding:18px 14px 14px;gap:10px;min-height:100vh;">
+      <!-- top bar -->
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div style="background:#fff;border-radius:999px;border:1px solid #E6EFF8;padding:4px 12px 4px 4px;display:flex;align-items:center;gap:8px;font-size:12px;font-family:'Frank Ruhl Libre',serif;font-weight:500;">
+          <div class="avatar" id="q-avatar" style="width:24px;height:24px;font-size:11px;"></div>
+          <span id="q-nick"></span>
+        </div>
+        <div style="font-size:12px;color:#5A6B89;letter-spacing:2px;" id="q-counter">שאלה 1/15</div>
+      </div>
+      <!-- timer -->
+      <div style="display:flex;align-items:center;justify-content:center;flex-direction:column;gap:4px;">
+        <div class="timer-wrap">
+          <svg id="timer-svg" width="76" height="76" style="transform:rotate(-90deg)">
+            <circle cx="38" cy="38" r="30" fill="none" stroke="#E6EFF8" stroke-width="6"/>
+            <circle id="timer-arc" cx="38" cy="38" r="30" fill="none" stroke="#3E6FA6" stroke-width="6" stroke-linecap="round"
+              stroke-dasharray="188.5" stroke-dashoffset="0" style="transition:stroke-dashoffset .9s linear"/>
+          </svg>
+          <div class="timer-num" id="timer-num" style="font-size:28px;color:#3E6FA6;">20</div>
+        </div>
+        <div style="color:#5A6B89;font-size:12px;font-family:'Frank Ruhl Libre',serif;letter-spacing:1px;" id="timer-hint">הקישי על הצבע</div>
+      </div>
+      <!-- 4 answer tiles -->
+      <div class="tile-grid" id="tile-grid"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── REVEAL ── -->
+<div id="screen-reveal" class="screen">
+  <div class="paper-bg" style="min-height:100vh;flex:1;">
+    <div class="wash-blue"></div><div class="wash-gold"></div>
+    <div class="decor-tl" id="reveal-tl"></div>
+    <div class="decor-br" id="reveal-br"></div>
+    <div class="inner" style="display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:32px 22px 22px;gap:20px;min-height:100vh;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:14px;margin-top:18px;">
+        <div id="reveal-icon" style="width:110px;height:110px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 18px 40px -16px rgba(35,55,90,0.18);"></div>
+        <div class="f-cursive" style="font-size:56px;line-height:0.9;" id="reveal-title">נכון!</div>
+        <div style="font-size:14px;color:#5A6B89;letter-spacing:1px;" id="reveal-points">+750 נקודות</div>
+      </div>
+      <div class="score-card" style="width:100%;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar" id="reveal-avatar" style="width:40px;height:40px;font-size:18px;"></div>
+            <div>
+              <div class="f-serif" style="font-size:16px;font-weight:500;" id="reveal-nick"></div>
+              <div style="color:#5A6B89;font-size:12px;" id="reveal-rank">מקום ? מתוך ?</div>
+            </div>
+          </div>
+          <div style="text-align:left;">
+            <div style="color:#5A6B89;font-size:11px;letter-spacing:2px;">סך הכול</div>
+            <div class="f-serif" style="font-size:28px;font-weight:500;color:#3E6FA6;line-height:1;" id="reveal-total">0</div>
+          </div>
+        </div>
+        <!-- Time taken + rank among correct -->
+        <div id="reveal-speed-row" style="display:none;flex-direction:row;gap:10px;">
+          <div style="flex:1;background:#F2F6FB;border-radius:12px;padding:10px 14px;text-align:center;border:1px solid #E6EFF8;">
+            <div style="font-size:10px;color:#5A6B89;letter-spacing:2px;margin-bottom:2px;">זמן תגובה</div>
+            <div class="f-serif" style="font-size:22px;font-weight:500;color:#3E6FA6;" id="reveal-time-taken">—</div>
+            <div style="font-size:10px;color:#8A95AB;">שניות</div>
+          </div>
+          <div style="flex:1;background:#F5EAC8;border-radius:12px;padding:10px 14px;text-align:center;border:1px solid #E5C77A;">
+            <div style="font-size:10px;color:#5A6B89;letter-spacing:2px;margin-bottom:2px;">בין הנכונות</div>
+            <div class="f-serif" style="font-size:22px;font-weight:500;color:#A07F3F;" id="reveal-rank-correct">—</div>
+            <div style="font-size:10px;color:#8A95AB;">מקום</div>
+          </div>
+        </div>
+        <div class="rank-delta" id="reveal-delta" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SCOREBOARD ── -->
+<div id="screen-scoreboard" class="screen">
+  <div class="paper-bg" style="min-height:100vh;flex:1;">
+    <div class="wash-blue"></div>
+    <div class="inner" style="display:flex;flex-direction:column;padding:28px 18px;gap:12px;min-height:100vh;">
+      <!-- Last answer summary banner -->
+      <div id="sb-answer-banner" style="display:none;border-radius:14px;padding:12px 16px;text-align:center;margin-bottom:4px;">
+        <div id="sb-banner-label" style="font-size:11px;letter-spacing:3px;margin-bottom:4px;"></div>
+        <div id="sb-banner-main" style="font-family:'Frank Ruhl Libre',serif;font-size:22px;font-weight:500;line-height:1.2;"></div>
+        <div id="sb-banner-sub" style="font-size:12px;margin-top:4px;opacity:0.8;"></div>
+      </div>
+      <div style="color:#5A6B89;font-size:11px;letter-spacing:4px;text-align:center;">המיקום שלך כעת</div>
+      <div class="f-serif" style="font-size:80px;font-weight:500;color:#3E6FA6;line-height:1;text-align:center;" id="sb-rank">?</div>
+      <div style="font-size:14px;color:#5A6B89;text-align:center;" id="sb-total-players">מתוך ? שחקנים</div>
+      <div id="sb-list" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;"></div>
+      <div style="font-size:12px;color:#8A95AB;letter-spacing:1px;text-align:center;margin-top:auto;padding-bottom:8px;">השאלה הבאה בקרוב…</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── PODIUM ── -->
+<div id="screen-podium" class="screen">
+  <div class="paper-bg" style="min-height:100vh;flex:1;background:linear-gradient(165deg,#FAF6EE 0%,#F5EAC8 60%,#E6EFF8 100%);">
+    <div class="wash-blue"></div><div class="wash-gold"></div>
+    <div class="inner" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;gap:14px;min-height:100vh;text-align:center;">
+      <div id="heart-podium" style="animation:float 2.5s ease-in-out infinite;"></div>
+      <div class="f-serif" style="font-size:26px;font-weight:500;color:#23375A;line-height:1;" id="podium-title">מקום</div>
+      <div class="f-cursive" style="font-size:90px;color:#3E6FA6;line-height:0.85;margin-top:-4px;" id="podium-rank">1</div>
+      <div style="font-size:14px;color:#5A6B89;" id="podium-pts"></div>
+      <div style="background:#fff;border-radius:14px;padding:10px 20px;font-family:'Frank Ruhl Libre',serif;font-size:14px;color:#23375A;border:1px solid #C9A961;margin-top:8px;">
+        תודה שהצטרפת לחגיגה של איילה <span id="heart-podium2"></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Theme ─────────────────────────────────────────────────────────────────────
+const T = {
+  blue:'#7AA8D6', blueDeep:'#3E6FA6', blueSoft:'#E6EFF8', blueMid:'#A9C6E2', blueWash:'#D9E6F2',
+  gold:'#C9A961', goldDeep:'#A07F3F', goldSoft:'#F5EAC8',
+  rose:'#D9A8B8', roseDeep:'#B47A8C', sage:'#A8BFA1', sageDeep:'#7A9A6E',
+  ink:'#23375A', ink2:'#5A6B89', ink3:'#8A95AB', cream:'#FAF6EE',
+};
+
+const ANSWER_COLORS = [
+  {bg:'#D9A8B8', deep:'#B47A8C'},
+  {bg:'#7AA8D6', deep:'#3E6FA6'},
+  {bg:'#E5C77A', deep:'#B8943F'},
+  {bg:'#A8BFA1', deep:'#7A9A6E'},
+];
+
+const SHAPES = [
+  // heart
+  `<svg viewBox="0 0 24 24" width="56" height="56"><path d="M12 21 C 6 17, 2 13, 3 9 C 4 6, 7 5, 9 6 C 10 7, 11 8, 12 9 C 13 8, 14 7, 15 6 C 17 5, 20 6, 21 9 C 22 13, 18 17, 12 21 Z" fill="#fff"/></svg>`,
+  // leaf
+  `<svg viewBox="0 0 24 24" width="56" height="56"><path d="M12 3 C 6 5, 4 11, 5 18 C 11 19, 18 16, 19 9 C 19 5, 16 3, 12 3 Z" fill="#fff"/></svg>`,
+  // flower
+  `<svg viewBox="0 0 24 24" width="56" height="56"><g fill="#fff"><ellipse cx="12" cy="6" rx="3.5" ry="5"/><ellipse cx="12" cy="18" rx="3.5" ry="5"/><ellipse cx="6" cy="12" rx="5" ry="3.5"/><ellipse cx="18" cy="12" rx="5" ry="3.5"/><circle cx="12" cy="12" r="2.5" fill="#fff" opacity="0.6"/></g></svg>`,
+  // star
+  `<svg viewBox="0 0 24 24" width="56" height="56"><path d="M12 2 L14.5 9 L22 10 L16 15 L18 22 L12 18 L6 22 L8 15 L2 10 L9.5 9 Z" fill="#fff"/></svg>`,
+];
+
+// Small shape for avatar-size
+const SHAPES_SM = SHAPES.map(s => s.replace(/width="56" height="56"/g, 'width="22" height="22"'));
+
+function heartSvg(size, color, fill='none', stroke=1.5) {
+  return `<svg viewBox="0 0 32 32" width="${size}" height="${size}"><path d="M16 27 C 8 22, 3 16, 4 11 C 5 7, 9 5, 12 7 C 14 8, 15 10, 16 12 C 17 10, 18 8, 20 7 C 23 5, 27 7, 28 11 C 29 16, 24 22, 16 27 Z" fill="${fill}" stroke="${color}" stroke-width="${stroke}" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+function leafSvg(size, hue=0, flip=false, opacity=0.85) {
+  const c1=`hsl(${210+hue} 38% 62%)`, c2=`hsl(${215+hue} 32% 48%)`, c3=`hsl(${205+hue} 45% 78%)`;
+  const id=`lg${hue}${size}`;
+  return `<svg viewBox="0 0 100 100" width="${size}" height="${size}" style="display:block;transform:${flip?'scaleX(-1)':'none'};opacity:${opacity}">
+    <defs><radialGradient id="${id}" cx="40%" cy="35%"><stop offset="0%" stop-color="${c3}"/><stop offset="60%" stop-color="${c1}"/><stop offset="100%" stop-color="${c2}"/></radialGradient></defs>
+    <path d="M50 8 C 28 18, 18 42, 22 70 C 40 88, 70 78, 80 60 C 88 40, 78 20, 50 8 Z" fill="url(#${id})"/>
+    <path d="M30 70 C 40 56, 55 40, 78 22" stroke="${c2}" stroke-width="1.2" fill="none" opacity="0.55"/>
+  </svg>`;
+}
+
+function leafSprigSvg(size, rotate=0, flip=false) {
+  return `<svg viewBox="0 0 200 200" width="${size}" height="${size}" style="display:block;transform:rotate(${rotate}deg)${flip?' scaleX(-1)':''}">
+    <path d="M30 170 C 80 130, 130 70, 180 30" stroke="${T.blue}" stroke-width="1.4" fill="none" opacity="0.55"/>
+    <circle cx="152" cy="42" r="2" fill="${T.gold}" opacity="0.7"/>
+    <circle cx="100" cy="96" r="1.5" fill="${T.gold}" opacity="0.6"/>
+    <circle cx="68" cy="128" r="1.5" fill="${T.gold}" opacity="0.6"/>
+  </svg>`;
+}
+
+function avatarBg(hue) {
+  return `linear-gradient(160deg, hsl(${hue} 40% 78%) 0%, hsl(${(hue+30)%360} 45% 62%) 100%)`;
+}
+
+// ── Init decorations ───────────────────────────────────────────────────────────
+document.getElementById('login-tl').innerHTML = leafSprigSvg(180, -20);
+document.getElementById('login-br').innerHTML = leafSprigSvg(160, 0, true);
+document.getElementById('reveal-tl').innerHTML = leafSprigSvg(180, -20);
+document.getElementById('reveal-br').innerHTML = leafSprigSvg(160, 0, true);
+document.getElementById('heart-login').innerHTML = heartSvg(22, T.blue);
+document.getElementById('card-leaf-tr').innerHTML = leafSvg(26, 2);
+document.getElementById('card-leaf-bl').innerHTML = leafSvg(20, -2);
+document.getElementById('heart-podium').innerHTML = heartSvg(52, T.gold, T.goldSoft, 1.5);
+document.getElementById('heart-podium2').innerHTML = heartSvg(12, T.gold);
+
+// ── State ──────────────────────────────────────────────────────────────────────
+const COOKIE_KEY = 'ayala_guest2';
+let myNickname = '', myScore = 0, myHue = 200;
+let selectedIdx = null, locked = false;
+let currentQTime = 20;
+
+function saveCookie(nick, score, hue, gameId) {
+  document.cookie = `${COOKIE_KEY}=${encodeURIComponent(JSON.stringify({nickname:nick,score,hue,gameId}))}; path=/; max-age=86400`;
+}
+function clearCookie() {
+  document.cookie = `${COOKIE_KEY}=; path=/; max-age=0`;
+}
+function readCookie() {
+  const m = document.cookie.split('; ').find(r => r.startsWith(COOKIE_KEY+'='));
+  if (!m) return null;
+  try { return JSON.parse(decodeURIComponent(m.split('=').slice(1).join('='))); } catch { return null; }
+}
+function pickHue(nick) {
+  let h=0; for(let i=0;i<nick.length;i++) h=(h*37+nick.charCodeAt(i))%360; return h;
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+}
+
+// ── Socket ─────────────────────────────────────────────────────────────────────
+const socket = io({ path: '/ayala-socket' });
+
+socket.on('connect', () => { setConn(true); });
+socket.on('disconnect', () => setConn(false));
+socket.on('connect_error', () => setConn(false));
+
+// First thing server sends — use it to validate the cookie's gameId
+socket.on('game_id', ({ gameId }) => {
+  const saved = readCookie();
+  if (saved?.nickname && saved?.gameId === gameId) {
+    // Same game — auto-rejoin
+    myNickname = saved.nickname; myScore = saved.score||0; myHue = saved.hue||pickHue(saved.nickname);
+    document.getElementById('nick-input').value = saved.nickname;
+    socket.emit('join', { nickname: saved.nickname });
+  } else if (saved) {
+    // Stale cookie (different game or no gameId) — clear and show login
+    clearCookie();
+  }
+});
+
+
+function setConn(ok) {
+  const el = document.getElementById('conn-status');
+  if (el) { el.textContent = ok ? '✓ מחובר' : '✗ מתחבר...'; el.className = 'conn '+(ok?'conn-ok':'conn-err'); }
+  const btn = document.getElementById('join-btn');
+  if (btn) btn.disabled = !ok;
+}
+
+socket.on('joined', ({nickname, score, questionCount, gameId}) => {
+  myNickname = nickname; myScore = score; myHue = pickHue(nickname);
+  saveCookie(nickname, score, myHue, gameId);
+  if (questionCount) {
+    const count = questionCount + ' שאלות';
+    const login = document.getElementById('login-q-count');
+    if (login) login.textContent = count;
+    const lobby = document.getElementById('lobby-q-count');
+    if (lobby) lobby.textContent = count;
+  }
+  setLobby();
+  showScreen('lobby');
+});
+
+socket.on('question_start', (data) => {
+  currentQTime = data.time;
+  selectedIdx = null; locked = false;
+  renderQuestion(data);
+  showScreen('question');
+});
+
+socket.on('timer_tick', ({timeLeft}) => updateTimer(timeLeft, currentQTime));
+
+let lastAnswerResult = null;
+
+socket.on('answer_result', ({correct, points, totalScore, timeTaken, rankAmongCorrect}) => {
+  myScore = totalScore;
+  lastAnswerResult = {correct, points, timeTaken, rankAmongCorrect};
+  saveCookie(myNickname, totalScore, myHue, readCookie()?.gameId);
+  renderReveal({correct, points, totalScore, timeTaken, rankAmongCorrect});
+  showScreen('reveal');
+});
+
+socket.on('question_ended', ({correctIndex, scoreboard}) => {
+  // if player never answered (timer ran out), show timeout message briefly then go to scoreboard
+  if (!lastAnswerResult) {
+    lastAnswerResult = { correct: false, points: 0, noAnswer: true };
+    renderReveal({ correct: false, points: 0, totalScore: myScore, noAnswer: true });
+    showScreen('reveal');
+    setTimeout(() => {
+      renderScoreboard(scoreboard, correctIndex);
+      showScreen('scoreboard');
+    }, 2500);
+    return;
+  }
+  renderScoreboard(scoreboard, correctIndex);
+  showScreen('scoreboard');
+});
+
+socket.on('game_over', ({scoreboard}) => {
+  renderPodium(scoreboard);
+  showScreen('podium');
+});
+
+socket.on('game_reset', () => {
+  clearCookie();
+  myNickname = ''; myScore = 0; myHue = 200;
+  document.getElementById('nick-input').value = '';
+  showScreen('login');
+});
+
+// ── Actions ────────────────────────────────────────────────────────────────────
+function joinGame() {
+  const nick = document.getElementById('nick-input').value.trim();
+  if (!nick) return;
+  socket.emit('join', { nickname: nick });
+}
+document.getElementById('nick-input').addEventListener('keydown', e => { if (e.key==='Enter') joinGame(); });
+
+function pickAnswer(idx) {
+  if (locked || selectedIdx !== null) return;
+  selectedIdx = idx; locked = true;
+  // visual feedback
+  document.querySelectorAll('.tile').forEach((t,i) => {
+    if (i===idx) { t.classList.add('selected'); t.innerHTML += `<div class="check-badge" style="color:${ANSWER_COLORS[i].deep}">✓</div>`; }
+    else t.classList.add('dimmed');
+    t.classList.add('disabled');
+  });
+  document.getElementById('timer-hint').textContent = 'תשובה נשלחה ✓';
+  socket.emit('answer', { answerIndex: idx });
+}
+
+// ── Lobby ──────────────────────────────────────────────────────────────────────
+function setLobby() {
+  document.getElementById('lobby-nick').textContent = myNickname;
+  document.getElementById('score-lobby').textContent = `ניקוד: ${myScore}`;
+  document.getElementById('heart-lobby').innerHTML = heartSvg(14, T.blue);
+}
+
+// ── Question ───────────────────────────────────────────────────────────────────
+function renderQuestion(data) {
+  document.getElementById('q-counter').textContent = `שאלה ${data.questionIndex+1}/${data.total}`;
+  const av = document.getElementById('q-avatar');
+  av.style.background = avatarBg(myHue);
+  av.textContent = (myNickname||'').slice(0,1).toUpperCase()||'✿';
+  document.getElementById('q-nick').textContent = myNickname;
+  document.getElementById('timer-hint').textContent = 'הקישי על הצבע';
+
+  const grid = document.getElementById('tile-grid');
+  grid.innerHTML = '';
+  ANSWER_COLORS.forEach((c,i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tile';
+    btn.style.background = c.bg;
+    btn.style.borderColor = c.bg;
+    const answerText = (data.answers && data.answers[i]) ? `<span style="font-family:'Frank Ruhl Libre',serif;font-size:15px;font-weight:500;color:#23375A;margin-top:6px;text-align:center;padding:0 6px;line-height:1.3;">${data.answers[i]}</span>` : '';
+    btn.innerHTML = `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">${SHAPES[i]}${answerText}</div>`;
+    btn.onclick = () => pickAnswer(i);
+    grid.appendChild(btn);
+  });
+  const start = data.timeLeft !== undefined ? data.timeLeft : data.time;
+  updateTimer(start, data.time);
+}
+
+function updateTimer(left, total) {
+  const pct = Math.max(0, left/total);
+  const c = 2*Math.PI*30;
+  document.getElementById('timer-arc').style.strokeDashoffset = c*(1-pct);
+  const color = left > total*0.4 ? T.blueDeep : left > total*0.2 ? T.gold : T.roseDeep;
+  document.getElementById('timer-arc').style.stroke = color;
+  document.getElementById('timer-num').style.color = color;
+  document.getElementById('timer-num').textContent = Math.ceil(left);
+}
+
+// ── Reveal ─────────────────────────────────────────────────────────────────────
+function renderReveal({correct, points, totalScore, rank, totalPlayers, lastDelta, timeTaken, rankAmongCorrect, noAnswer}) {
+  const accent = correct ? T.sageDeep : T.roseDeep;
+  const accentBg = correct ? T.sage : T.rose;
+  const iconEl = document.getElementById('reveal-icon');
+  iconEl.style.border = `1.5px solid ${accentBg}`;
+  if (noAnswer) {
+    iconEl.innerHTML = `<div class="f-cursive" style="font-size:44px;color:${accent}">⏱</div>`;
+    document.getElementById('reveal-title').style.color = accent;
+    document.getElementById('reveal-title').textContent = 'נגמר הזמן!';
+    document.getElementById('reveal-points').textContent = 'בפעם הבאה תספיקי 😊';
+  } else {
+    iconEl.innerHTML = correct
+      ? heartSvg(56, accent, accentBg, 2)
+      : `<div class="f-cursive" style="font-size:44px;color:${accent}">?</div>`;
+    document.getElementById('reveal-title').style.color = accent;
+    document.getElementById('reveal-title').textContent = correct ? 'נכון!' : 'אופס…';
+    document.getElementById('reveal-points').textContent = correct ? `+${points} נקודות` : 'בלי נקודות הפעם';
+  }
+  const av = document.getElementById('reveal-avatar');
+  av.style.background = avatarBg(myHue);
+  av.textContent = (myNickname||'').slice(0,1).toUpperCase()||'✿';
+  document.getElementById('reveal-nick').textContent = myNickname;
+  document.getElementById('reveal-rank').textContent = rank ? `מקום ${rank} מתוך ${totalPlayers}` : '';
+  document.getElementById('reveal-total').textContent = (totalScore||myScore).toLocaleString('he-IL');
+
+  // Speed + rank among correct
+  const speedRow = document.getElementById('reveal-speed-row');
+  if (correct && timeTaken != null) {
+    speedRow.style.display = 'flex';
+    document.getElementById('reveal-time-taken').textContent = timeTaken.toFixed(1);
+    document.getElementById('reveal-rank-correct').textContent = rankAmongCorrect != null ? rankAmongCorrect : '—';
+  } else {
+    speedRow.style.display = 'none';
+  }
+
+  const deltaEl = document.getElementById('reveal-delta');
+  if (lastDelta && lastDelta !== 0) {
+    deltaEl.style.display = 'flex';
+    deltaEl.style.background = lastDelta>0 ? '#EFF7EE' : '#FCEEEF';
+    deltaEl.style.color = lastDelta>0 ? T.sageDeep : T.roseDeep;
+    deltaEl.innerHTML = `<span>תזוזה במיקום</span><span>${lastDelta>0?`↑ ${lastDelta}`:`↓ ${Math.abs(lastDelta)}`}</span>`;
+  } else {
+    deltaEl.style.display = 'none';
+  }
+}
+
+// ── Scoreboard ──────────────────────────────────────────────────────────────────
+function renderScoreboard(scores, correctIndex) {
+  const myRank = scores.findIndex(e=>e.nickname===myNickname)+1;
+  document.getElementById('sb-rank').textContent = myRank||'?';
+  document.getElementById('sb-total-players').textContent = `מתוך ${scores.length} שחקנים`;
+  const medals = ['🥇','🥈','🥉'];
+  document.getElementById('sb-list').innerHTML = scores.slice(0,5).map((e,i) => `
+    <div class="sb-row${e.nickname===myNickname?' me':''}">
+      <span class="f-serif" style="font-size:20px;font-weight:500;color:${i<3?T.gold:T.ink2};min-width:32px;">${i<3?medals[i]:i+1}</span>
+      <div class="avatar" style="width:36px;height:36px;font-size:15px;background:${avatarBg((e.nickname.charCodeAt(0)*47)%360)};">${e.nickname.slice(0,1).toUpperCase()}</div>
+      <span class="f-serif" style="flex:1;font-size:15px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${e.nickname}</span>
+      <span class="f-serif" style="font-size:18px;font-weight:500;color:${T.blueDeep};">${e.score.toLocaleString('he-IL')}</span>
+    </div>`).join('');
+
+  // Answer banner — always shown, reset lastAnswerResult after use
+  const banner = document.getElementById('sb-answer-banner');
+  const r = lastAnswerResult;
+  lastAnswerResult = null; // clear for next question
+  if (r && r.correct) {
+    banner.style.cssText = 'display:block;border-radius:14px;padding:12px 16px;text-align:center;margin-bottom:4px;background:#EAF4EA;border:1px solid #A8BFA1;';
+    document.getElementById('sb-banner-label').style.color = T.sageDeep;
+    document.getElementById('sb-banner-label').textContent = 'תשובה נכונה ✓';
+    document.getElementById('sb-banner-main').style.color = T.sageDeep;
+    document.getElementById('sb-banner-main').textContent = `+${r.points} נקודות`;
+    const parts = [];
+    if (r.timeTaken != null) parts.push(`זמן תגובה: ${r.timeTaken.toFixed(1)} שניות`);
+    if (r.rankAmongCorrect != null) parts.push(`מקום ${r.rankAmongCorrect} בין הנכונים`);
+    document.getElementById('sb-banner-sub').style.color = T.sageDeep;
+    document.getElementById('sb-banner-sub').textContent = parts.join('  •  ');
+  } else {
+    banner.style.cssText = 'display:block;border-radius:14px;padding:12px 16px;text-align:center;margin-bottom:4px;background:#FAF0F2;border:1px solid #D9A8B8;';
+    document.getElementById('sb-banner-label').style.color = T.roseDeep;
+    document.getElementById('sb-banner-label').textContent = r && r.noAnswer ? 'לא ענית בזמן' : 'תשובה שגויה';
+    document.getElementById('sb-banner-main').style.color = T.roseDeep;
+    document.getElementById('sb-banner-main').textContent = 'בלי נקודות הפעם';
+    document.getElementById('sb-banner-sub').textContent = '';
+  }
+}
+
+// ── Podium ─────────────────────────────────────────────────────────────────────
+function renderPodium(scores) {
+  const myRank = scores.findIndex(e=>e.nickname===myNickname)+1;
+  const isTop3 = myRank>=1 && myRank<=3;
+  document.getElementById('podium-title').textContent = isTop3 ? 'מקום' : 'איזה משחק';
+  document.getElementById('podium-rank').textContent = isTop3 ? myRank : '!';
+  document.getElementById('podium-pts').textContent = `${myScore.toLocaleString('he-IL')} נקודות סופיות`;
+}
+</script>
+</body>
+</html>

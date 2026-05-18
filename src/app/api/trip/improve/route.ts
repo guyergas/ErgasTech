@@ -6,7 +6,19 @@ const client = process.env.ANTHROPIC_API_KEY
   : null;
 
 export async function POST(req: NextRequest) {
-  const { rawText, authorName, authorRole } = await req.json();
+  const body = await req.json();
+  const { rawText, authorName, authorRole, audioUrl } = body;
+
+  // Handle audio transcription
+  if (audioUrl) {
+    // Audio transcription requires manual input or browser speech recognition
+    // This is a known limitation — for now, encourage keeping the audio file
+    return NextResponse.json({
+      error: "תמלול אוטומטי אינו זמין כעת. אנא בחרו 'שמור כקובץ' כדי לשמור את ההקלטה.",
+    }, { status: 501 });
+  }
+
+  // Handle text improvement
   if (!rawText?.trim()) {
     return NextResponse.json({ error: "Missing text" }, { status: 400 });
   }

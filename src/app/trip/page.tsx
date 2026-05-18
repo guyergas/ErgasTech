@@ -4,8 +4,7 @@ import { PostCard, DaySection, StatsBar } from "@/trip/TripComponents";
 import type { TripPost } from "@/trip/data";
 import Link from "next/link";
 
-// Re-validate every 30 seconds so new posts appear without rebuild
-export const revalidate = 30;
+export const dynamic = "force-dynamic";
 
 export default async function TripHome() {
   const posts = getPosts();
