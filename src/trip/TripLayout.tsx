@@ -96,7 +96,7 @@ function TripNav({ pathname }: { pathname: string }) {
     });
   }, [pathname]);
 
-  const profileHref = isAdmin && userId ? `/trip/profile/${userId}` : guestName ? "/trip/profile" : `/trip/login?next=${encodeURIComponent(pathname)}`;
+  const profileHref = isAdmin && userId ? `/trip/profile/${userId}` : `/trip/login?next=${encodeURIComponent(pathname)}`;
 
   return (
     <nav

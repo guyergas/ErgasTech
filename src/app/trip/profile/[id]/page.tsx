@@ -29,22 +29,23 @@ export default function AdminProfilePage() {
   useEffect(() => {
     (async () => {
       try {
+        // Always load requested user's data
+        const userRes = await fetch(`/api/trip/users/${userId}`);
+        if (userRes.ok) {
+          const userData: UserData = await userRes.json();
+          setUser(userData);
+          setUsername(userData.name);
+          setPhotoUrl(userData.photoUrl || "");
+          setEditName(userData.name);
+        }
+
+        // Check if current viewer is logged in
         const res = await fetch("/api/trip/auth");
         if (res.ok) {
           const data = await res.json();
           if (data.isAdmin && data.userId) {
             setIsAdmin(true);
             setAdminUserId(data.userId);
-
-            // Load user data
-            const userRes = await fetch(`/api/trip/users/${userId}`);
-            if (userRes.ok) {
-              const userData: UserData = await userRes.json();
-              setUser(userData);
-              setUsername(userData.name);
-              setPhotoUrl(userData.photoUrl || "");
-              setEditName(userData.name);
-            }
           }
         }
       } catch { /* ignore */ }

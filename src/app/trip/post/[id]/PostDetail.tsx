@@ -269,7 +269,7 @@ export default function PostDetail({ post, comments: initialComments, details: i
           </div>
           {!identity && (
             <div style={{ textAlign: "center", marginTop: 6 }}>
-              <Link href={`/trip/profile`} style={{ fontSize: 12, color: "var(--terra)", textDecoration: "underline" }}>
+              <Link href={`/trip/login`} style={{ fontSize: 12, color: "var(--terra)", textDecoration: "underline" }}>
                 בחרו משפחה כדי להגיב
               </Link>
             </div>
@@ -295,7 +295,7 @@ export default function PostDetail({ post, comments: initialComments, details: i
           ) : (
             <div style={{ marginBottom: 18, padding: "16px", background: "var(--paper)", borderRadius: 16, border: "1px solid var(--rule)", textAlign: "center" }}>
               <p style={{ margin: "0 0 10px", fontSize: 14, color: "var(--ink-2)" }}>בחרו משפחה כדי להגיב</p>
-              <Link href={`/trip/profile`} style={{ display: "inline-block", padding: "10px 20px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
+              <Link href={`/trip/login`} style={{ display: "inline-block", padding: "10px 20px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
                 בחר משפחה
               </Link>
             </div>
