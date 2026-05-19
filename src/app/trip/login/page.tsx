@@ -1,14 +1,12 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense } from "react";
+import LoginForm from "./LoginForm";
 
 export default function LoginPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/trip/profile");
-  }, [router]);
-
-  return null;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <LoginForm />
+    </Suspense>
+  );
 }
