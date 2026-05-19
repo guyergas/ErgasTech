@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
     id,
     slug: id,
     title: body.title ?? "",
-    authorId: body.authorId ?? "guyergas",
+    authorId: body.authorId ?? 1,
     postType: body.postType ?? "text",
     layout: body.layout ?? "standard",
     rawText: body.rawText ?? "",
