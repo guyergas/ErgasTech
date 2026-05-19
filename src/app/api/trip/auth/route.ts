@@ -36,10 +36,10 @@ export async function GET(req: NextRequest) {
       const payload = parts[0];
       const match = payload.match(/^admin:(.+):\d+$/);
       if (match) {
-        const email = match[1];
+        const email = match[1].toLowerCase();
         const users = getUsers();
         for (const user of Object.values(users)) {
-          if (user.email === email) {
+          if (user.email.toLowerCase() === email) {
             userId = user.id;
             break;
           }

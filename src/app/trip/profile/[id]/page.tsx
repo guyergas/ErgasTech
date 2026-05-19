@@ -134,7 +134,7 @@ export default function AdminProfilePage() {
         )}
       </div>
 
-      {isAdmin && adminUserId === userId ? (
+      {isAdmin && adminUserId === userId && (
         <>
           {editing ? (
             <form style={{ background: "var(--ivory)", borderRadius: 16, padding: "16px", marginBottom: 16 }}>
@@ -194,13 +194,6 @@ export default function AdminProfilePage() {
             </button>
           </div>
         </>
-      ) : (
-        <div style={{ textAlign: "center", padding: "20px" }}>
-          <p style={{ fontSize: 14, color: "var(--ink-3)", marginBottom: 16 }}>זו הדף הפרופיל של משתמש אחר</p>
-          <Link href="/trip/login" style={{ display: "inline-block", padding: "10px 20px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
-            כניסה
-          </Link>
-        </div>
       )}
     </div>
   );

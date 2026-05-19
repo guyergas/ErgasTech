@@ -179,7 +179,7 @@ function TripNav({ pathname }: { pathname: string }) {
         {/* Profile / login icon */}
         <Link
           href={profileHref}
-          title={guestName ? `הפרופיל של ${guestName}` : "כניסה"}
+          title={isAdmin && userId ? "פרופיל" : guestName ? `הפרופיל של ${guestName}` : "כניסה"}
           style={{
             display: "flex",
             alignItems: "center",
@@ -187,17 +187,17 @@ function TripNav({ pathname }: { pathname: string }) {
             width: 36,
             height: 36,
             borderRadius: "50%",
-            background: guestName ? "var(--terra)" : "rgba(88,118,160,0.12)",
-            color: guestName ? "#fff" : "var(--ink-3)",
-            fontSize: guestName ? 15 : 20,
+            background: (isAdmin && userId) || guestName ? "var(--terra)" : "rgba(88,118,160,0.12)",
+            color: (isAdmin && userId) || guestName ? "#fff" : "var(--ink-3)",
+            fontSize: (isAdmin && userId) || guestName ? 15 : 20,
             fontWeight: 700,
-            border: guestName ? "none" : "0.5px solid var(--rule)",
+            border: (isAdmin && userId) || guestName ? "none" : "0.5px solid var(--rule)",
             textDecoration: "none",
             flexShrink: 0,
             transition: "all .15s",
           }}
         >
-          {guestName ? guestName.slice(0, 1).toUpperCase() : "👤"}
+          👤
         </Link>
       </div>
     </nav>
