@@ -22,10 +22,12 @@ export default function LoginForm() {
       const res = await fetch("/api/trip/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ email: email.trim() }),
       });
 
       if (res.ok) {
+        await new Promise(r => setTimeout(r, 500));
         router.push(next);
       } else {
         const data = await res.json();
