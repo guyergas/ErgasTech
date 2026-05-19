@@ -37,7 +37,7 @@ export default function PostDetail({ post, comments: initialComments, details: i
     (async () => {
       // Check if admin is logged in
       try {
-        const res = await fetch("/api/trip/auth");
+        const res = await fetch("/api/trip/auth", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
           if (data.isAdmin && data.userId) {

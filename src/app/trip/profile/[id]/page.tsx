@@ -43,7 +43,7 @@ export default function ProfilePage() {
           setEditName(userData.name);
         }
 
-        const res = await fetch("/api/trip/auth");
+        const res = await fetch("/api/trip/auth", { credentials: "include" });
         if (res.ok) {
           const data = await res.json();
           if (data.isAdmin && data.userId) {
@@ -63,7 +63,7 @@ export default function ProfilePage() {
   }, [userId]);
 
   async function handleLogout() {
-    await fetch("/api/trip/auth", { method: "DELETE" });
+    await fetch("/api/trip/auth", { method: "DELETE", credentials: "include" });
     setIsAdmin(false);
     router.push("/trip");
   }

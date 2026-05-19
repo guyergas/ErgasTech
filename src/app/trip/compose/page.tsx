@@ -12,7 +12,7 @@ export default function ComposePage() {
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
 
   useEffect(() => {
-    fetch("/api/trip/auth")
+    fetch("/api/trip/auth", { credentials: "include" })
       .then((r) => r.json())
       .then((d) => setIsAdmin(d.isAdmin))
       .catch(() => setIsAdmin(false));

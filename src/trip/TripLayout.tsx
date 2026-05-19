@@ -90,7 +90,7 @@ function TripNav({ pathname }: { pathname: string }) {
       if (raw) setGuestName(JSON.parse(raw).name ?? null);
       else setGuestName(null);
     } catch { /* ignore */ }
-    fetch("/api/trip/auth").then(r => r.json()).then(d => {
+    fetch("/api/trip/auth", { credentials: "include" }).then(r => r.json()).then(d => {
       setIsAdmin(!!d.isAdmin);
       if (d.userId) setUserId(d.userId);
     });
