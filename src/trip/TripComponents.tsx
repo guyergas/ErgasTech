@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { family, familyList, photos, posts as allPosts, getFamilyUserIdByFamilyId, type TripPost, type FamilyMember } from "./data";
+import { family, familyList, photos, posts as allPosts, getFamilyUserIdByFamilyId, getFamilyIdByUserId, type TripPost, type FamilyMember } from "./data";
 
 // ─── Avatar ───────────────────────────────────────────────────
 interface AvatarProps {
@@ -114,11 +114,12 @@ export function VoicePill({
   len,
   place,
 }: {
-  authorId: string;
+  authorId: number;
   len: number;
   place: string;
 }) {
-  const m = family[authorId] || family.guyergas;
+  const familyId = getFamilyIdByUserId(authorId);
+  const m = family[familyId] || family.guyergas;
   return (
     <div
       style={{
@@ -272,7 +273,7 @@ export function PostCard({ post }: PostCardProps) {
               marginTop: 14,
             }}
           >
-            <Avatar memberId={post.authorId} size={32} ring />
+            <Avatar memberId={getFamilyIdByUserId(post.authorId)} size={32} ring />
             <div style={{ flex: 1, minWidth: 0 }}>
               {/* location */}
               <div

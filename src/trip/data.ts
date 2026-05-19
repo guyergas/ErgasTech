@@ -31,7 +31,7 @@ export interface TripPost {
   id: string;
   slug: string;
   title: string;
-  authorId: string;
+  authorId: number;
   postType: PostType;
   layout: PostLayout;
   rawText: string;
@@ -153,6 +153,10 @@ export function getFamilyUserIdByFamilyId(familyId: string): number {
     if (user.familyId === familyId) return user.id;
   }
   return 0;
+}
+
+export function getFamilyIdByUserId(userId: number): string {
+  return users[userId]?.familyId || 'guyergas';
 }
 
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { route, posts, travelSegments, stats as defaultStats } from "@/trip/data";
+import { route, posts, travelSegments, stats as defaultStats, getFamilyIdByUserId } from "@/trip/data";
 import { Avatar } from "@/trip/TripComponents";
 import type { JourneyStats } from "@/trip/data";
 
@@ -420,7 +420,7 @@ export default function ReplayPage() {
                     backdropFilter: "blur(8px)",
                   }}
                 >
-                  <Avatar memberId={p.authorId} size={36} />
+                  <Avatar memberId={getFamilyIdByUserId(p.authorId)} size={36} />
                   <div style={{ flex: 1 }}>
                     <div
                       style={{

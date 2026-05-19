@@ -6,7 +6,7 @@ import Link from "next/link";
 import type { TripPost, FamilyMember } from "@/trip/data";
 import type { Comment } from "@/trip/store";
 import { Avatar, PhotoPlaceholder } from "@/trip/TripComponents";
-import { family } from "@/trip/data";
+import { family, getFamilyIdByUserId } from "@/trip/data";
 
 const REACTIONS = ["❤️", "😂", "😮", "🥹", "🔥"];
 
@@ -174,7 +174,7 @@ export default function PostDetail({ post, comments: initialComments, details: i
 
         {/* Author */}
         <Link href={`/trip/profile/${post.authorId}`} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, textDecoration: "none" }}>
-          <Avatar memberId={post.authorId} size={48} ring />
+          <Avatar memberId={getFamilyIdByUserId(post.authorId)} size={48} ring />
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--ink)" }}>{m.name}</div>
             <div style={{ fontSize: 12, color: "var(--ink-3)" }}>{m.role} · {post.date}</div>
