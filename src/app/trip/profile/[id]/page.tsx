@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import type { TripPost } from "@/trip/data";
 
 interface UserData {
   id: number;
@@ -25,6 +26,7 @@ export default function AdminProfilePage() {
   const [editName, setEditName] = useState("");
   const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [posts, setPosts] = useState<TripPost[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -47,6 +49,14 @@ export default function AdminProfilePage() {
             setIsAdmin(true);
             setAdminUserId(data.userId);
           }
+        }
+
+        // Load posts by this user
+        const postsRes = await fetch("/api/trip/posts");
+        if (postsRes.ok) {
+          const allPosts: TripPost[] = await postsRes.json();
+          const userPosts = allPosts.filter(p => p.authorId === userId);
+          setPosts(userPosts);
         }
       } catch { /* ignore */ }
     })();
@@ -194,6 +204,42 @@ export default function AdminProfilePage() {
             </button>
           </div>
         </>
+      )}
+
+      {/* User's posts */}
+      {posts.length > 0 && (
+        <div style={{ marginTop: 40 }}>
+          <h2 className="trip-serif" style={{ margin: "0 0 16px", fontSize: 22, fontWeight: 600, color: "var(--ink)" }}>
+            זיכרונות ({posts.length})
+          </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {posts.map((post) => (
+              <Link
+                key={post.id}
+                href={`/trip/post/${post.id}`}
+                style={{
+                  display: "block",
+                  padding: "14px 16px",
+                  background: "var(--ivory)",
+                  borderRadius: 12,
+                  border: "0.5px solid var(--rule)",
+                  textDecoration: "none",
+                  transition: "all .2s",
+                }}
+              >
+                <div style={{ fontWeight: 700, fontSize: 15, color: "var(--ink)", marginBottom: 4 }}>
+                  {post.title || "זיכרון ללא כותרת"}
+                </div>
+                <div style={{ fontSize: 13, color: "var(--ink-2)", marginBottom: 6 }}>
+                  {post.rawText.slice(0, 80)}{post.rawText.length > 80 ? "..." : ""}
+                </div>
+                <div style={{ fontSize: 12, color: "var(--ink-3)" }}>
+                  {post.date} · יום {post.day}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
