@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { route, posts, travelSegments, stats, family } from "@/trip/data";
-import { useState } from "react";
+import { route, posts, travelSegments, stats as defaultStats, family } from "@/trip/data";
+import { useState, useEffect } from "react";
+import type { JourneyStats } from "@/trip/data";
 
 const TripMap = dynamic(() => import("./TripMap"), {
   ssr: false,
@@ -28,8 +29,16 @@ const CITY_IDS: Record<string, string> = {
 
 export default function MapPage() {
   const [selected, setSelected] = useState("bkk");
+  const [stats, setStats] = useState<JourneyStats>(defaultStats);
   const sel = route.find((r) => r.id === selected)!;
   const selPosts = posts.filter((p) => p.city === CITY_IDS[selected]);
+
+  useEffect(() => {
+    fetch("/api/trip/stats")
+      .then(r => r.json())
+      .then(setStats)
+      .catch(() => setStats(defaultStats));
+  }, []);
 
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 60 }}>

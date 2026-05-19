@@ -87,14 +87,80 @@ export function getVisitorReaction(postId: string, visitorId: string): string {
   return getReactions()[postId]?.[visitorId] ?? "";
 }
 
+// ─── Users ────────────────────────────────────────────────────
+// Structure: { [userId]: { id: number, email: string, name: string, icon: string } }
+
+export interface User {
+  id: number;
+  email: string;
+  name: string;
+  photoUrl?: string;
+}
+
+type UsersStore = Record<number, User>;
+
+function initializeDefaultUsers(): UsersStore {
+  return {
+    1: { id: 1, email: 'guyergas@gmail.com', name: 'Guy' },
+    2: { id: 2, email: 'yedikla@gmail.com', name: 'Mom' },
+    3: { id: 3, email: 'ofirergas@gmail.com', name: 'Ofir' },
+    4: { id: 4, email: 'ergasayala@gmail.com', name: 'Ayala' },
+    5: { id: 5, email: 'omerergas@gmail.com', name: 'Omer' },
+    6: { id: 6, email: 'idoergas@gmail.com', name: 'Ido' },
+  };
+}
+
+export function getUsers(): UsersStore {
+  return readJson<UsersStore>("users", initializeDefaultUsers());
+}
+
+export function getUser(userId: number): User | null {
+  const users = getUsers();
+  return users[userId] ?? null;
+}
+
+export function saveUser(user: User): void {
+  const users = getUsers();
+  users[user.id] = user;
+  writeJson("users", users);
+}
+
+// ─── Visitor Info ─────────────────────────────────────────────
+// Structure: { [visitorId]: { name: string } }
+
+type VisitorStore = Record<string, { name: string }>;
+
+export function getVisitors(): VisitorStore {
+  return readJson<VisitorStore>("visitors", {});
+}
+
+export function setVisitorName(visitorId: string, name: string): void {
+  const store = getVisitors();
+  store[visitorId] = { name };
+  writeJson("visitors", store);
+}
+
+export function getReactionDetailsForPost(postId: string): Array<{ emoji: string; names: string[] }> {
+  const reactions = getReactions()[postId] ?? {};
+  const visitors = getVisitors();
+  const emojiMap: Record<string, string[]> = {};
+
+  for (const [visitorId, emoji] of Object.entries(reactions)) {
+    if (!emojiMap[emoji]) emojiMap[emoji] = [];
+    const visitorName = visitors[visitorId]?.name ?? "Guest";
+    emojiMap[emoji].push(visitorName);
+  }
+
+  return Object.entries(emojiMap).map(([emoji, names]) => ({ emoji, names }));
+}
+
 // ─── Comments ────────────────────────────────────────────────
 // Structure: Comment[]
 
 export interface Comment {
   id: string;
   postId: string;
-  authorName: string;
-  familyMemberId?: string; // set if posted by family (admin cookie)
+  authorId: number; // numeric userId
   body: string;
   createdAt: string;
   deletedAt?: string;

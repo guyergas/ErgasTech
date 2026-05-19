@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { setReaction, getReactionCounts, getVisitorReaction } from "@/trip/store";
+import { setReaction, getReactionCounts, getVisitorReaction, setVisitorName, getReactionDetailsForPost } from "@/trip/store";
 import { nanoid } from "nanoid";
 
 const VISITOR_COOKIE = "trip_visitor";
@@ -20,18 +20,25 @@ function getOrSetVisitorId(req: NextRequest, res: NextResponse): string {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const visitorId = req.cookies.get(VISITOR_COOKIE)?.value ?? "";
-  const counts = getReactionCounts(id);
+  const details = getReactionDetailsForPost(id);
   const mine = visitorId ? getVisitorReaction(id, visitorId) : "";
-  return NextResponse.json({ counts, mine });
+  return NextResponse.json({ details, mine });
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { emoji } = await req.json();
+  const { emoji, visitorId: incomingVisitorId, visitorName } = await req.json();
   const res = NextResponse.json({ ok: true });
-  const visitorId = getOrSetVisitorId(req, res);
-  setReaction(id, visitorId, emoji ?? "");
-  const counts = getReactionCounts(id);
-  const mine = getVisitorReaction(id, visitorId);
-  return NextResponse.json({ counts, mine }, { headers: res.headers });
+
+  // Use provided visitorId (numeric or string) or generate a new one for guests
+  let visitorId = incomingVisitorId;
+  if (!visitorId) {
+    visitorId = getOrSetVisitorId(req, res);
+  }
+
+  if (visitorName) setVisitorName(visitorId.toString(), visitorName);
+  setReaction(id, visitorId.toString(), emoji ?? "");
+  const details = getReactionDetailsForPost(id);
+  const mine = getVisitorReaction(id, visitorId.toString());
+  return NextResponse.json({ details, mine }, { headers: res.headers });
 }

@@ -118,11 +118,11 @@ export default function ProfilePage() {
         }}
       >
         {[
-          { v: myPosts.length || 12, l: "זיכרונות" },
-          { v: myPosts.filter((p) => p.layout === "voice").length || 6, l: "הקלטות" },
+          { v: myPosts.length, l: "זיכרונות" },
+          { v: myPosts.filter((p) => p.layout === "voice").length, l: "הקלטות" },
           {
-            v: myPosts.reduce((sum, p) => sum + p.likes, 0) || 247,
-            l: "לייקים",
+            v: myPosts.reduce((sum, p) => sum + (p.comments || 0), 0),
+            l: "תגובות",
           },
         ].map((s) => (
           <div

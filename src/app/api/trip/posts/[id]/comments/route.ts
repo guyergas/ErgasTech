@@ -11,16 +11,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { authorName, body, familyMemberId } = await req.json();
-  if (!body?.trim() || !authorName?.trim()) {
+  const { authorId, body } = await req.json();
+  if (!body?.trim() || !authorId) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
   const comment = {
     id: nanoid(8),
     postId: id,
-    authorName: authorName.trim(),
-    familyMemberId: familyMemberId ?? undefined,
+    authorId: parseInt(authorId),
     body: body.trim(),
     createdAt: new Date().toISOString(),
   };

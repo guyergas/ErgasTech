@@ -17,8 +17,8 @@ services:
       TRIP_DATA_DIR: /data/trip
     volumes:
       - ./public/ayala:/app/public/ayala
-      - trip-uploads:/app/public/trip/uploads
-      - trip-data:/data/trip
+      - ./public/trip/uploads:/app/public/trip/uploads
+      - ./data/trip:/data/trip
     restart: unless-stopped
     networks:
       - ergastech-network
@@ -26,7 +26,3 @@ services:
 networks:
   ergastech-network:
     driver: bridge
-
-volumes:
-  trip-uploads:
-  trip-data:

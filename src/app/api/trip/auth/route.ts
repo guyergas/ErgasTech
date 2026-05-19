@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { makeToken, verifyToken, isAdminEmail, COOKIE_NAME } from "@/trip/auth";
+import { makeToken, verifyToken, isAdminEmail, COOKIE_NAME, getUsers } from "@/trip/auth";
 
 // POST: login with email — issues admin cookie if email is in admin list
 export async function POST(req: NextRequest) {
@@ -26,5 +26,27 @@ export async function DELETE() {
 
 export async function GET(req: NextRequest) {
   const token = req.cookies.get(COOKIE_NAME)?.value ?? "";
-  return NextResponse.json({ isAdmin: verifyToken(token) });
+  const isAdmin = verifyToken(token);
+
+  // Extract email from token: "admin:email@domain.com:timestamp.signature"
+  let userId = 0;
+  if (isAdmin && token) {
+    const parts = token.split(".");
+    if (parts[0]) {
+      const payload = parts[0];
+      const match = payload.match(/^admin:(.+):\d+$/);
+      if (match) {
+        const email = match[1];
+        const users = getUsers();
+        for (const user of Object.values(users)) {
+          if (user.email === email) {
+            userId = user.id;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  return NextResponse.json({ isAdmin, userId });
 }

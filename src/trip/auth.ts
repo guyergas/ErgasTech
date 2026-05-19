@@ -1,5 +1,7 @@
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
+import type { User } from "./store";
+import { getUsers as getStoreUsers, saveUser as saveStoreUser } from "./store";
 
 export const COOKIE_NAME = "trip_admin";
 
@@ -9,7 +11,7 @@ const SECRET = process.env.TRIP_AUTH_SECRET ?? "ergastrip-secret-2026";
 export function getAdminEmails(): string[] {
   const env = process.env.TRIP_ADMIN_EMAILS ?? "";
   if (env) return env.split(",").map(e => e.trim().toLowerCase()).filter(Boolean);
-  return ["guyergas@gmail.com", "yedikla@gmail.com", "ofirergas@gmail.com", "ergasayala@gmail.com"];
+  return ["guyergas@gmail.com", "yedikla@gmail.com", "ofirergas@gmail.com", "ergasayala@gmail.com", "omerergas@gmail.com", "idoergas@gmail.com"];
 }
 
 export function isAdminEmail(email: string): boolean {
@@ -50,4 +52,17 @@ export async function isAdmin(): Promise<boolean> {
 export function isAdminRequest(req: NextRequest): boolean {
   const token = req.cookies.get(COOKIE_NAME)?.value ?? "";
   return verifyToken(token);
+}
+
+export function getUser(userId: number): User | null {
+  const users = getStoreUsers();
+  return users[userId] ?? null;
+}
+
+export function saveUser(user: User): void {
+  saveStoreUser(user);
+}
+
+export function getUsers(): Record<number, User> {
+  return getStoreUsers();
 }

@@ -10,52 +10,94 @@ import { family } from "@/trip/data";
 
 const REACTIONS = ["❤️", "😂", "😮", "🥹", "🔥"];
 
+interface ReactionDetail {
+  emoji: string;
+  names: string[];
+}
+
 interface Props {
   post: TripPost;
   comments: Comment[];
-  reactionCounts: Record<string, number>;
+  details: ReactionDetail[];
   member: FamilyMember;
 }
 
-export default function PostDetail({ post, comments: initialComments, reactionCounts: initialCounts, member: m }: Props) {
+export default function PostDetail({ post, comments: initialComments, details: initialDetails, member: m }: Props) {
   const router = useRouter();
   const [showOriginal, setShowOriginal] = useState(false);
-  const [counts, setCounts] = useState(initialCounts);
+  const [details, setDetails] = useState<ReactionDetail[]>(initialDetails);
   const [myReaction, setMyReaction] = useState("");
   const [comments, setComments] = useState(initialComments);
-  const [identity, setIdentity] = useState<{ name: string; email: string } | null>(null);
+  const [identity, setIdentity] = useState<{ name: string; userId?: number; memberId?: string; isAdmin?: boolean } | null>(null);
   const [commentBody, setCommentBody] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [tooltipEmoji, setTooltipEmoji] = useState<string | null>(null);
 
   useEffect(() => {
-    // Load guest identity from localStorage
-    try {
-      const raw = localStorage.getItem("trip_guest");
-      if (raw) setIdentity(JSON.parse(raw));
-    } catch { /* ignore */ }
-  }, []);
+    (async () => {
+      // Check if admin is logged in
+      try {
+        const res = await fetch("/api/trip/auth");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.isAdmin && data.userId) {
+            // Load user data
+            const userRes = await fetch(`/api/trip/users/${data.userId}`);
+            if (userRes.ok) {
+              const user = await userRes.json();
+              setIdentity({ name: user.name, userId: user.id, isAdmin: true });
+              return;
+            }
+          }
+        }
+      } catch { /* ignore */ }
+
+      // Load family member selection from localStorage
+      try {
+        const memberId = localStorage.getItem("trip_member");
+        if (memberId && family[memberId]) {
+          const member = family[memberId];
+          setIdentity({ name: member.name, memberId });
+        }
+      } catch { /* ignore */ }
+    })();
+
+    // Load reaction details
+    fetch(`/api/trip/posts/${post.id}/react`)
+      .then((res) => res.json())
+      .then((data) => {
+        setDetails(data.details ?? []);
+        setMyReaction(data.mine ?? "");
+      })
+      .catch(() => {});
+  }, [post.id]);
 
   const displayText = showOriginal || post.selectedTextVersion === "raw"
     ? post.rawText
     : (post.improvedText || post.rawText);
 
-  const totalReactions = Object.values(counts).reduce((s, n) => s + n, 0);
+  const totalReactions = details.reduce((sum, d) => sum + d.names.length, 0);
 
   async function handleReact(emoji: string) {
     if (!identity) {
-      window.location.href = `/trip/login?next=/trip/post/${post.id}`;
+      window.location.href = `/trip/login`;
       return;
     }
     const next = emoji === myReaction ? "" : emoji;
     setMyReaction(next);
     try {
+      const visitorId = identity.userId ?? identity.memberId ?? "guest";
       const res = await fetch(`/api/trip/posts/${post.id}/react`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emoji: next }),
+        body: JSON.stringify({
+          emoji: next,
+          visitorId: visitorId,
+          visitorName: identity.name,
+        }),
       });
       const data = await res.json();
-      setCounts(data.counts ?? {});
+      setDetails(data.details ?? []);
       setMyReaction(data.mine ?? "");
     } catch {
       setMyReaction(myReaction); // revert
@@ -70,7 +112,10 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
       const res = await fetch(`/api/trip/posts/${post.id}/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ authorName: identity.name, body: commentBody }),
+        body: JSON.stringify({
+          authorId: identity.userId ?? 0,
+          body: commentBody,
+        }),
       });
       const newComment = await res.json();
       if (res.ok) {
@@ -128,16 +173,13 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
         )}
 
         {/* Author */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+        <Link href={`/trip/profile/${post.authorId}`} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, textDecoration: "none" }}>
           <Avatar memberId={post.authorId} size={48} ring />
           <div style={{ flex: 1 }}>
             <div style={{ fontWeight: 700, fontSize: 16, color: "var(--ink)" }}>{m.name}</div>
             <div style={{ fontSize: 12, color: "var(--ink-3)" }}>{m.role} · {post.date}</div>
           </div>
-          <Link href={`/trip/profile/${post.authorId}`} style={{ padding: "8px 14px", borderRadius: 100, background: m.color, color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
-            הפרופיל
-          </Link>
-        </div>
+        </Link>
 
         {/* Text */}
         <p style={{ fontSize: 17, lineHeight: 1.7, color: "var(--ink)", margin: "0 0 18px" }}>{displayText}</p>
@@ -201,16 +243,34 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
               }}>{r}</button>
             ))}
           </div>
-          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8, flexWrap: "wrap" }}>
-            {Object.entries(counts).map(([emoji, count]) => (
-              <span key={emoji} style={{ fontSize: 13, color: "var(--ink-3)" }}>{emoji} {count}</span>
+          <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8, flexWrap: "wrap", position: "relative" }}>
+            {details.map(({ emoji, names }) => (
+              <div key={emoji} style={{ position: "relative" }}>
+                <button
+                  onMouseEnter={() => setTooltipEmoji(emoji)}
+                  onMouseLeave={() => setTooltipEmoji(null)}
+                  onClick={() => setTooltipEmoji(tooltipEmoji === emoji ? null : emoji)}
+                  style={{ fontSize: 13, color: "var(--ink-3)", background: "transparent", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+                  {emoji} {names.length}
+                </button>
+                {tooltipEmoji === emoji && (
+                  <div style={{
+                    position: "absolute", bottom: 24, left: "50%", transform: "translateX(-50%)", background: "var(--ink)", color: "#fff",
+                    borderRadius: 8, padding: "8px 12px", fontSize: 12, whiteSpace: "nowrap", zIndex: 10,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)"
+                  }}>
+                    {names.join(", ")}
+                    <div style={{ position: "absolute", bottom: -4, left: "50%", transform: "translateX(-50%)", width: 0, height: 0, borderLeft: "4px solid transparent", borderRight: "4px solid transparent", borderTop: "4px solid var(--ink)" }} />
+                  </div>
+                )}
+              </div>
             ))}
             {totalReactions === 0 && <span style={{ fontSize: 12, color: "var(--ink-3)" }}>היו הראשונים להגיב</span>}
           </div>
           {!identity && (
             <div style={{ textAlign: "center", marginTop: 6 }}>
-              <Link href={`/trip/login?next=/trip/post/${post.id}`} style={{ fontSize: 12, color: "var(--terra)", textDecoration: "underline" }}>
-                התחברו כדי לתגובה
+              <Link href={`/trip/profile`} style={{ fontSize: 12, color: "var(--terra)", textDecoration: "underline" }}>
+                בחרו משפחה כדי להגיב
               </Link>
             </div>
           )}
@@ -224,45 +284,35 @@ export default function PostDetail({ post, comments: initialComments, reactionCo
 
           {/* Comment form — requires login */}
           {identity ? (
-            <form onSubmit={handleComment} style={{ marginBottom: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "var(--terra)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13, fontWeight: 700, color: "#fff", flexShrink: 0 }}>
-                  {identity.name.slice(0, 1)}
-                </div>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{identity.name}</span>
-                <Link href="/trip/profile" style={{ marginRight: "auto", fontSize: 11, color: "var(--ink-3)", textDecoration: "underline" }}>שינוי</Link>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <input value={commentBody} onChange={(e) => setCommentBody(e.target.value)} placeholder="כתבו תגובה..." required
-                  style={{ flex: 1, padding: "10px 12px", borderRadius: 12, border: "1px solid var(--rule)", fontSize: 14, color: "var(--ink)", background: "var(--paper)", outline: "none", fontFamily: "inherit" }} />
-                <button type="submit" disabled={submittingComment}
-                  style={{ padding: "10px 16px", borderRadius: 12, background: "var(--terra)", color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", flexShrink: 0 }}>
-                  {submittingComment ? "..." : "שלח"}
-                </button>
-              </div>
+            <form onSubmit={handleComment} style={{ marginBottom: 18, display: "flex", gap: 8 }}>
+              <input value={commentBody} onChange={(e) => setCommentBody(e.target.value)} placeholder="כתבו תגובה..." required
+                style={{ flex: 1, padding: "10px 12px", borderRadius: 12, border: "1px solid var(--rule)", fontSize: 14, color: "var(--ink)", background: "var(--paper)", outline: "none", fontFamily: "inherit" }} />
+              <button type="submit" disabled={submittingComment}
+                style={{ padding: "10px 16px", borderRadius: 12, background: "var(--terra)", color: "#fff", fontWeight: 700, fontSize: 14, border: "none", cursor: "pointer", flexShrink: 0 }}>
+                {submittingComment ? "..." : "שלח"}
+              </button>
             </form>
           ) : (
             <div style={{ marginBottom: 18, padding: "16px", background: "var(--paper)", borderRadius: 16, border: "1px solid var(--rule)", textAlign: "center" }}>
-              <p style={{ margin: "0 0 10px", fontSize: 14, color: "var(--ink-2)" }}>כדי להגיב יש להתחבר</p>
-              <Link href={`/trip/login?next=/trip/post/${post.id}`} style={{ display: "inline-block", padding: "10px 20px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
-                כניסה / הרשמה
+              <p style={{ margin: "0 0 10px", fontSize: 14, color: "var(--ink-2)" }}>בחרו משפחה כדי להגיב</p>
+              <Link href={`/trip/profile`} style={{ display: "inline-block", padding: "10px 20px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
+                בחר משפחה
               </Link>
             </div>
           )}
 
           {/* Comment list */}
           {comments.map((c) => {
-            const fm = c.familyMemberId ? family[c.familyMemberId] : null;
+            const userName = c.authorId > 0 ? `User ${c.authorId}` : "Guest";
+            const userInitial = userName.charAt(0).toUpperCase();
             return (
               <div key={c.id} style={{ display: "flex", gap: 10, marginBottom: 14 }}>
-                {fm ? <Avatar memberId={fm.id} size={32} /> : (
-                  <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#E8DAC4", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "var(--ink-2)", flexShrink: 0 }}>
-                    {c.authorName.slice(0, 1)}
-                  </div>
-                )}
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#E8DAC4", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 700, color: "var(--ink-2)", flexShrink: 0 }}>
+                  {userInitial}
+                </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ background: "var(--paper)", borderRadius: 14, padding: "8px 12px" }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{c.authorName}</div>
+                    <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 2 }}>{userName}</div>
                     <div style={{ fontSize: 14, color: "var(--ink-2)", lineHeight: 1.5 }}>{c.body}</div>
                   </div>
                   <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4, padding: "0 12px" }}>

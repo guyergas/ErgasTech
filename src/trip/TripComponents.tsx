@@ -12,7 +12,7 @@ interface AvatarProps {
 }
 
 export function Avatar({ memberId, size = 36, ring = false, glow = false }: AvatarProps) {
-  const m = family[memberId] || family.dad;
+  const m = family[memberId] || family.guyergas;
   return (
     <div
       style={{
@@ -118,7 +118,7 @@ export function VoicePill({
   len: number;
   place: string;
 }) {
-  const m = family[authorId] || family.dad;
+  const m = family[authorId] || family.guyergas;
   return (
     <div
       style={{
@@ -198,7 +198,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post }: PostCardProps) {
-  const m = family[post.authorId] || family.dad;
+  const m = family[post.authorId] || family.guyergas;
   const isHero = post.layout === "hero";
   const isVoice = post.layout === "voice";
   const tilt = postTilt(post.id);

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { familyList, family, type FamilyMember } from "@/trip/data";
 import { Avatar } from "@/trip/TripComponents";
+import { LocationPicker } from "@/trip/LocationPicker";
 import type { MediaItem } from "@/trip/data";
 
 export default function ComposePage() {
@@ -43,7 +44,7 @@ export default function ComposePage() {
 // ─── Main Compose Form ────────────────────────────────────
 function ComposeForm() {
   const router = useRouter();
-  const [author, setAuthor] = useState("dad");
+  const [author, setAuthor] = useState(0);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [improvedDescription, setImprovedDescription] = useState("");
@@ -63,17 +64,27 @@ function ComposeForm() {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [locationName, setLocationName] = useState("");
-  const [city, setCity] = useState("");
+  const [location, setLocation] = useState("");
   const [lat, setLat] = useState<number | undefined>();
   const [lng, setLng] = useState<number | undefined>();
-  const [locating, setLocating] = useState(false);
-  const [suggestedLocation, setSuggestedLocation] = useState("");
+  const [locationPickerOpen, setLocationPickerOpen] = useState(false);
 
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const m = family[author] || family.dad;
+  useEffect(() => {
+    // Load the admin user ID on mount
+    fetch("/api/trip/auth")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.isAdmin && d.userId) {
+          setAuthor(d.userId);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const m = family.guyergas; // Use fixed family member for family context
 
   // ─── Media Upload ─────────────────────────────────────
   const handleMediaUpload = async (files: FileList | null) => {
@@ -98,41 +109,11 @@ function ComposeForm() {
     setUploading(false);
   };
 
-  // ─── GPS Location ─────────────────────────────────────
-  const getLocation = async () => {
-    if (!navigator.geolocation) {
-      setError("Geolocation not supported");
-      return;
-    }
-
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setLat(latitude);
-        setLng(longitude);
-
-        try {
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&accept-language=he`,
-            { headers: { "User-Agent": "trip-app" } }
-          );
-          const data = await res.json();
-          const addr = data.address ?? {};
-          setSuggestedLocation(
-            addr.tourism || addr.attraction || addr.amenity ||
-            addr.suburb || addr.neighbourhood || addr.village ||
-            addr.town || addr.city_district || addr.city ||
-            addr.county || addr.state || ""
-          );
-        } catch (e) {
-          console.error("Reverse geocode failed:", e);
-        }
-        setLocating(false);
-      },
-      () => setLocating(false),
-      { timeout: 8000 }
-    );
+  // ─── Location Selection ──────────────────────────────────
+  const handleLocationSelect = (locationStr: string, locLat: number, locLng: number) => {
+    setLocation(locationStr);
+    setLat(locLat);
+    setLng(locLng);
   };
 
   // ─── Audio Recording ──────────────────────────────────
@@ -334,8 +315,7 @@ function ComposeForm() {
         rawText: description,
         improvedText: useImproved ? improvedDescription : undefined,
         selectedTextVersion: useImproved ? "improved" : "raw",
-        locationName,
-        city,
+        locationName: location,
         country: "תאילנד",
         lat,
         lng,
@@ -386,33 +366,6 @@ function ComposeForm() {
           ✦ זיכרון חדש
         </h1>
       </div>
-
-      {/* Author selector */}
-      <Section>
-        <SectionLabel>מי כותב/ת</SectionLabel>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {familyList.map((mem) => (
-            <button
-              key={mem.id}
-              onClick={() => setAuthor(mem.id)}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 4,
-                padding: "6px 10px",
-                borderRadius: 14,
-                background: author === mem.id ? `${mem.color}20` : "transparent",
-                border: `1.5px solid ${author === mem.id ? mem.color : "transparent"}`,
-                cursor: "pointer",
-              }}
-            >
-              <Avatar memberId={mem.id} size={36} />
-              <span style={{ fontSize: 11, fontWeight: author === mem.id ? 700 : 400 }}>{mem.name}</span>
-            </button>
-          ))}
-        </div>
-      </Section>
 
       {/* Title */}
       <Section>
@@ -543,22 +496,18 @@ function ComposeForm() {
       {/* Location */}
       <Section>
         <SectionLabel>מיקום</SectionLabel>
-        <button onClick={getLocation} disabled={locating} style={{ ...buttonStyle, background: lat ? "rgba(90,160,90,0.15)" : "var(--ivory)", color: lat ? "var(--jade)" : "var(--ink-2)", marginBottom: 10 }}>
-          {locating ? "⏳ מאתר..." : lat ? "✓ GPS נלכד" : "📡 GPS"}
+        <button onClick={() => setLocationPickerOpen(true)} style={{ ...buttonStyle, background: lat ? "rgba(90,160,90,0.15)" : "var(--ivory)", color: lat ? "var(--jade)" : "var(--ink-2)", marginBottom: 10, width: "100%" }}>
+          {lat ? "✓ GPS נלכד" : "📍 בחרו מיקום"}
         </button>
-        {suggestedLocation && (
-          <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-            <button onClick={() => setLocationName(suggestedLocation)} style={{ ...buttonStyle, background: "var(--jade)", color: "#fff", flex: 1 }}>
-              אשר: {suggestedLocation}
-            </button>
-            <button onClick={() => setSuggestedLocation("")} style={{ ...buttonStyle, background: "var(--ivory)", color: "var(--ink)" }}>
-              דחה
-            </button>
-          </div>
-        )}
-        <input value={locationName} onChange={(e) => setLocationName(e.target.value)} placeholder="שם המקום" style={{ ...inputStyle, width: "100%", marginBottom: 8, boxSizing: "border-box" }} />
-        <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="עיר" style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
+        <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="אתר, עיר, מדינה" style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
       </Section>
+
+      {/* Location Picker Modal */}
+      <LocationPicker
+        isOpen={locationPickerOpen}
+        onSelect={handleLocationSelect}
+        onClose={() => setLocationPickerOpen(false)}
+      />
 
       {/* Publish */}
       <div style={{ padding: "0 16px", marginBottom: 20 }}>

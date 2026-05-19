@@ -34,7 +34,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File too large" }, { status: 413 });
   }
 
-  const filename = `${nanoid(10)}.${ext}`;
+  const userId = formData.get("userId");
+  const filename = userId ? `user-${userId}-${nanoid(10)}.${ext}` : `${nanoid(10)}.${ext}`;
   const filepath = path.join(UPLOAD_DIR, filename);
   await writeFile(filepath, buffer);
 

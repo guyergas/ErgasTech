@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { route, posts, travelSegments, stats } from "@/trip/data";
+import { route, posts, travelSegments, stats as defaultStats } from "@/trip/data";
 import { Avatar } from "@/trip/TripComponents";
+import type { JourneyStats } from "@/trip/data";
 
 const TRANSPORT_ICONS: Record<string, string> = {
   flight: "✈️",
@@ -16,7 +17,15 @@ const TRANSPORT_ICONS: Record<string, string> = {
 export default function ReplayPage() {
   const [playing, setPlaying] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(0);
+  const [stats, setStats] = useState<JourneyStats>(defaultStats);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    fetch("/api/trip/stats")
+      .then(r => r.json())
+      .then(setStats)
+      .catch(() => setStats(defaultStats));
+  }, []);
 
   const activeRoute = route.filter((r) => !r.future);
 

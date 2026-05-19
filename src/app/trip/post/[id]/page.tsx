@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { getPost, getComments, getReactionCounts } from "@/trip/store";
+import { getPost, getComments, getReactionDetailsForPost } from "@/trip/store";
 import { family } from "@/trip/data";
 import PostDetail from "./PostDetail";
 
@@ -11,8 +11,8 @@ export default async function PostPage({ params }: { params: Promise<{ id: strin
   if (!post) notFound();
 
   const comments = getComments(id).reverse(); // newest first
-  const reactionCounts = getReactionCounts(id);
-  const m = family[post.authorId] || family.dad;
+  const details = getReactionDetailsForPost(id);
+  const m = family[post.authorId] || family.guyergas;
 
-  return <PostDetail post={post} comments={comments} reactionCounts={reactionCounts} member={m} />;
+  return <PostDetail post={post} comments={comments} details={details} member={m} />;
 }
