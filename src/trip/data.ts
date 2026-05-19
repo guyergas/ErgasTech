@@ -148,6 +148,13 @@ export const users: Record<number, { id: number; email: string; familyId: string
   6: { id: 6, email: 'idoergas@gmail.com', familyId: 'ido' },
 };
 
+export function getFamilyUserIdByFamilyId(familyId: string): number {
+  for (const user of Object.values(users)) {
+    if (user.familyId === familyId) return user.id;
+  }
+  return 0;
+}
+
 
 // ─── Photo Placeholders ───────────────────────────────────────
 export const photos: Record<string, PhotoPlaceholder> = {

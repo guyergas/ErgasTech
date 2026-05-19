@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { family, familyList, photos, posts as allPosts, type TripPost, type FamilyMember } from "./data";
+import { family, familyList, photos, posts as allPosts, getFamilyUserIdByFamilyId, type TripPost, type FamilyMember } from "./data";
 
 // ─── Avatar ───────────────────────────────────────────────────
 interface AvatarProps {
@@ -497,7 +497,7 @@ export function FamilyRing() {
       {familyList.map((m: FamilyMember) => (
         <Link
           key={m.id}
-          href={`/trip/profile/${m.id}`}
+          href={`/trip/profile/${getFamilyUserIdByFamilyId(m.id)}`}
           style={{
             display: "flex",
             flexDirection: "column",

@@ -82,6 +82,7 @@ function TripNav({ pathname }: { pathname: string }) {
 
   const [guestName, setGuestName] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState<number | null>(null);
 
   useEffect(() => {
     try {
@@ -89,10 +90,13 @@ function TripNav({ pathname }: { pathname: string }) {
       if (raw) setGuestName(JSON.parse(raw).name ?? null);
       else setGuestName(null);
     } catch { /* ignore */ }
-    fetch("/api/trip/auth").then(r => r.json()).then(d => setIsAdmin(!!d.isAdmin));
+    fetch("/api/trip/auth").then(r => r.json()).then(d => {
+      setIsAdmin(!!d.isAdmin);
+      if (d.userId) setUserId(d.userId);
+    });
   }, [pathname]);
 
-  const profileHref = guestName ? "/trip/profile" : `/trip/login?next=${encodeURIComponent(pathname)}`;
+  const profileHref = isAdmin && userId ? `/trip/profile/${userId}` : guestName ? "/trip/profile" : `/trip/login?next=${encodeURIComponent(pathname)}`;
 
   return (
     <nav

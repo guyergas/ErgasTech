@@ -1,4 +1,4 @@
-import { stats, familyList } from "@/trip/data";
+import { stats, familyList, getFamilyUserIdByFamilyId } from "@/trip/data";
 import { getPosts } from "@/trip/store";
 import { PostCard, DaySection, StatsBar } from "@/trip/TripComponents";
 import type { TripPost } from "@/trip/data";
@@ -89,7 +89,7 @@ export default async function TripHome() {
         {/* Family ring */}
         <div style={{ display: "flex", gap: 16, marginTop: 4, overflowX: "auto", padding: "4px 0 8px", scrollbarWidth: "none" as const }}>
           {familyList.map((m) => (
-            <Link key={m.id} href={`/trip/profile/${m.id}`}
+            <Link key={m.id} href={`/trip/profile/${getFamilyUserIdByFamilyId(m.id)}`}
               style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 6, flexShrink: 0, textDecoration: "none" }}
             >
               <div style={{ width: 54, height: 54, borderRadius: "50%", background: m.color, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, boxShadow: `0 0 0 2.5px var(--paper, #FAF6EC), 0 0 0 4.5px ${m.color}` }}>
