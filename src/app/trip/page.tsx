@@ -56,7 +56,7 @@ export default async function TripHome() {
 
   // Recalculate stats from real posts
   const actualStats = {
-    days: posts.length ? Math.max(...posts.map((p) => p.day)) : stats.days,
+    days: posts.length ? (Math.max(...posts.map((p) => p.day)) - Math.min(...posts.map((p) => p.day)) + 1) : 0,
     places: locations.size || stats.places,
     posts: posts.length || stats.posts,
     kms: Math.round(kms),
@@ -66,12 +66,14 @@ export default async function TripHome() {
     <div style={{ maxWidth: 480, margin: "0 auto", padding: "0 0 120px" }}>
       {/* Header */}
       <div style={{ padding: "32px 20px 16px", position: "relative" }}>
-        <div
-          className="trip-mono"
-          style={{ fontSize: 10, color: "var(--terra)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}
-        >
-          יום {actualStats.days} · {stats.kms.toLocaleString("he")} ק״מ
-        </div>
+        {actualStats.days > 0 && (
+          <div
+            className="trip-mono"
+            style={{ fontSize: 10, color: "var(--terra)", letterSpacing: 2, textTransform: "uppercase", marginBottom: 6 }}
+          >
+            יום {actualStats.days} · {actualStats.kms.toLocaleString("he")} ק״מ
+          </div>
+        )}
         <h1
           className="trip-serif"
           style={{ margin: 0, fontSize: 38, lineHeight: 1.05, fontWeight: 500, color: "var(--terra-d)" }}
