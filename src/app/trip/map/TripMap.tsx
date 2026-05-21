@@ -34,9 +34,34 @@ export default function TripMap({ posts, segments, route }: Props) {
         shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
       });
 
+      // Calculate bounds from posts with coordinates
+      const validPosts = posts.filter(p => p.lat && p.lng);
+      let center: [number, number] = [14.5, 100.5];
+      let zoom = 6;
+
+      if (validPosts.length > 0) {
+        const lats = validPosts.map(p => p.lat!);
+        const lngs = validPosts.map(p => p.lng!);
+        const minLat = Math.min(...lats);
+        const maxLat = Math.max(...lats);
+        const minLng = Math.min(...lngs);
+        const maxLng = Math.max(...lngs);
+
+        center = [(minLat + maxLat) / 2, (minLng + maxLng) / 2];
+
+        // Calculate zoom to fit bounds
+        const latDiff = maxLat - minLat;
+        const lngDiff = maxLng - minLng;
+        const maxDiff = Math.max(latDiff, lngDiff);
+        if (maxDiff > 5) zoom = 5;
+        else if (maxDiff > 2) zoom = 7;
+        else if (maxDiff > 0.5) zoom = 9;
+        else zoom = 11;
+      }
+
       map = L.map(containerRef.current!, {
-        center: [14.5, 100.5],
-        zoom: 6,
+        center,
+        zoom,
         scrollWheelZoom: false,
         zoomControl: true,
       });
