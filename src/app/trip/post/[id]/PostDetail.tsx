@@ -183,18 +183,6 @@ export default function PostDetail({ post, comments: initialComments, details: i
 
         {(post.photo || (post.mediaItems && post.mediaItems.length > 0)) && (
           <div style={{ position: "absolute", bottom: 22, right: 20, left: 20, color: "#fff" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-              {post.lat && post.lng ? (
-                <span onClick={() => setShowLocationMap(true)} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 100, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
-                  📍 {[post.locationName, post.city, post.country].filter(p => p && p.length > 0).join(", ")}
-                </span>
-              ) : (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 100, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", fontSize: 12, fontWeight: 500 }}>
-                  📍 {[post.locationName, post.city, post.country].filter(p => p && p.length > 0).join(", ")}
-                </span>
-              )}
-              <span style={{ padding: "4px 10px", borderRadius: 100, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", fontSize: 12 }}>יום {post.day}</span>
-            </div>
             <h1 className="trip-serif" style={{ margin: 0, fontSize: 32, lineHeight: 1.1, fontWeight: 500, textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>{post.title}</h1>
           </div>
         )}
@@ -505,39 +493,52 @@ export default function PostDetail({ post, comments: initialComments, details: i
 function LocationMapEmbed({ lat, lng }: { lat: number; lng: number }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
     (async () => {
-      const L = (await import("leaflet")).default;
+      try {
+        const L = (await import("leaflet")).default;
 
-      delete (L.Icon.Default.prototype as any)._getIconUrl;
-      L.Icon.Default.mergeOptions({
-        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-      });
+        delete (L.Icon.Default.prototype as any)._getIconUrl;
+        L.Icon.Default.mergeOptions({
+          iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+          iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+          shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+        });
 
-      const map = L.map(containerRef.current!, {
-        center: [lat, lng],
-        zoom: 13,
-        scrollWheelZoom: true,
-      });
+        const map = L.map(containerRef.current!, {
+          center: [lat, lng],
+          zoom: 13,
+          scrollWheelZoom: true,
+          zoomControl: true,
+        });
 
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "© OpenStreetMap contributors",
-        maxZoom: 18,
-      }).addTo(map);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: "© OpenStreetMap",
+          maxZoom: 18,
+        }).addTo(map);
 
-      L.marker([lat, lng], { title: "Location" })
-        .addTo(map)
-        .bindPopup("📍 Your location")
-        .openPopup();
+        L.marker([lat, lng]).addTo(map).bindPopup("📍").openPopup();
 
-      mapRef.current = map;
+        mapRef.current = map;
+        setLoading(false);
+      } catch (e) {
+        console.error("Map load error:", e);
+        setLoading(false);
+      }
     })();
   }, [lat, lng]);
 
-  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
+  return (
+    <div ref={containerRef} style={{ width: "100%", height: "100%", position: "relative" }}>
+      {loading && (
+        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.9)", zIndex: 10 }}>
+          <div style={{ fontSize: 12, color: "var(--ink-3)" }}>טוען מפה...</div>
+        </div>
+      )}
+    </div>
+  );
 }
