@@ -30,14 +30,15 @@ const CITY_IDS: Record<string, string> = {
 export default function MapPage() {
   const [selected, setSelected] = useState("bkk");
   const [stats, setStats] = useState<JourneyStats>(defaultStats);
+  const [postsData, setPostsData] = useState(posts);
   const sel = route.find((r) => r.id === selected)!;
-  const selPosts = posts.filter((p) => p.city === CITY_IDS[selected]);
+  const selPosts = postsData.filter((p) => p.city === CITY_IDS[selected]);
 
   useEffect(() => {
-    fetch("/api/trip/stats")
-      .then(r => r.json())
-      .then(setStats)
-      .catch(() => setStats(defaultStats));
+    Promise.all([
+      fetch("/api/trip/posts").then(r => r.json()).then(setPostsData).catch(() => {}),
+      fetch("/api/trip/stats").then(r => r.json()).then(setStats).catch(() => setStats(defaultStats)),
+    ]);
   }, []);
 
   return (
@@ -57,7 +58,7 @@ export default function MapPage() {
 
       {/* Leaflet Map */}
       <div style={{ margin: "0 16px 16px", borderRadius: 20, overflow: "hidden", boxShadow: "var(--shadow-card)", border: "0.5px solid var(--rule)" }}>
-        <TripMap posts={posts} segments={travelSegments} route={route} />
+        <TripMap posts={postsData} segments={travelSegments} route={route} />
       </div>
 
       {/* Replay link */}
