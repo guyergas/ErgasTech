@@ -255,8 +255,8 @@ export default function PostDetail({ post, comments: initialComments, details: i
           )}
         </div>
 
-        {/* Location (when no photo) */}
-        {!post.photo && post.locationName && (
+        {/* Location */}
+        {post.locationName && (
           <div onClick={() => post.lat && post.lng && setShowLocationMap(true)} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", background: `${m.color}10`, borderRadius: 12, border: `0.5px solid ${m.color}30`, cursor: post.lat && post.lng ? "pointer" : "default" }}>
             <span style={{ fontSize: 14 }}>📍</span>
             <div>
