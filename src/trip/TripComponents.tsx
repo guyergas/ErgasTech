@@ -292,7 +292,7 @@ export function PostCard({ post }: PostCardProps) {
                   className="trip-mono"
                   style={{ fontSize: 10, color: "var(--ink-3)", letterSpacing: 0.5 }}
                 >
-                  {post.locationName} · {post.city}
+                  {[post.locationName, post.city, post.country].filter(p => p && p.length > 0).join(", ")}
                 </span>
               </div>
               {/* title */}

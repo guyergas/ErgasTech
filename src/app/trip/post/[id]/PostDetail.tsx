@@ -184,7 +184,7 @@ export default function PostDetail({ post, comments: initialComments, details: i
           <div style={{ position: "absolute", bottom: 22, right: 20, left: 20, color: "#fff" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 100, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", fontSize: 12, fontWeight: 500 }}>
-                📍 {post.locationName} · {post.city}
+                📍 {[post.locationName, post.city, post.country].filter(p => p && p.length > 0).join(", ")}
               </span>
               <span style={{ padding: "4px 10px", borderRadius: 100, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", fontSize: 12 }}>יום {post.day}</span>
             </div>
