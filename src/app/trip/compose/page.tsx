@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, useRef, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { familyList, family, type FamilyMember } from "@/trip/data";
 import { Avatar } from "@/trip/TripComponents";
 import { LocationPicker } from "@/trip/LocationPicker";
-import type { MediaItem } from "@/trip/data";
+import type { MediaItem, TripPost } from "@/trip/data";
 
 export default function ComposePage() {
   const router = useRouter();
@@ -38,12 +38,18 @@ export default function ComposePage() {
     );
   }
 
-  return <ComposeForm />;
+  return (
+    <Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>טוען...</div>}>
+      <ComposeForm />
+    </Suspense>
+  );
 }
 
 // ─── Main Compose Form ────────────────────────────────────
 function ComposeForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const postId = searchParams?.get("postId");
   const [author, setAuthor] = useState(0);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -65,9 +71,13 @@ function ComposeForm() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
   const [location, setLocation] = useState("");
+  const [city, setCity] = useState("");
+  const [country, setCountry] = useState("תאילנד");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [lat, setLat] = useState<number | undefined>();
   const [lng, setLng] = useState<number | undefined>();
   const [locationPickerOpen, setLocationPickerOpen] = useState(false);
+  const [day, setDay] = useState(1);
 
   const [publishing, setPublishing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -82,7 +92,37 @@ function ComposeForm() {
         }
       })
       .catch(() => {});
-  }, []);
+
+    // Load post if editing
+    if (postId) {
+      fetch(`/api/trip/posts/${postId}`)
+        .then((r) => r.json())
+        .then((post: TripPost) => {
+          setAuthor(post.authorId);
+          setTitle(post.title);
+          setDescription(post.rawText);
+          if (post.improvedText) {
+            setImprovedDescription(post.improvedText);
+            setUseImproved(post.selectedTextVersion === "improved");
+          }
+          setLocation(post.locationName);
+          setCity(post.city);
+          setCountry(post.country);
+          setDay(post.day);
+          setDate(post.date);
+          setLat(post.lat);
+          setLng(post.lng);
+          if (post.mediaItems) {
+            setMediaItems(post.mediaItems);
+          }
+          if (post.audioUrl) {
+            setAudioUrl(post.audioUrl);
+            setVoiceLen(post.voiceLen || 0);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [postId]);
 
   const m = family.guyergas; // Use fixed family member for family context
 
@@ -114,6 +154,15 @@ function ComposeForm() {
     setLocation(locationStr);
     setLat(locLat);
     setLng(locLng);
+
+    // Parse city and country from location string (format: "site, city, country")
+    const parts = locationStr.split(",").map(p => p.trim());
+    if (parts.length >= 2) {
+      const parsedCountry = parts[parts.length - 1];
+      const parsedCity = parts[parts.length - 2];
+      setCity(parsedCity);
+      setCountry(parsedCountry);
+    }
   };
 
   // ─── Audio Recording ──────────────────────────────────
@@ -307,21 +356,20 @@ function ComposeForm() {
       const hasAudio = !!audioUrl;
       const hasVideo = hasMedia && mediaItems.some((m) => m.type === "video");
 
-      const post = {
+      const post: any = {
         title: title || "ללא כותרת",
-        authorId: author,
-        postType: hasVideo ? "video" : hasMedia ? "photo" : hasAudio ? "voice" : "text",
-        layout: hasMedia ? "gallery" : hasAudio ? "voice" : "standard",
+        authorId: typeof author === "string" ? parseInt(author) : author,
         rawText: description,
         improvedText: useImproved ? improvedDescription : undefined,
         selectedTextVersion: useImproved ? "improved" : "raw",
         locationName: location,
-        country: "תאילנד",
-        lat,
-        lng,
+        city: city,
+        country: country,
+        day: day,
+        date: date,
+        lat: lat ? (typeof lat === "string" ? parseFloat(lat) : lat) : undefined,
+        lng: lng ? (typeof lng === "string" ? parseFloat(lng) : lng) : undefined,
         locationPrecision: lat !== undefined ? "exact" : "general",
-        day: 1,
-        date: new Date().toLocaleDateString("he-IL"),
         mediaItems: hasMedia ? mediaItems : undefined,
         photo: hasMedia ? mediaItems[0].url : undefined,
         extras: hasMedia && mediaItems.length > 1 ? mediaItems.slice(1).map((m) => m.url) : undefined,
@@ -330,22 +378,42 @@ function ComposeForm() {
         aiImproved: useImproved,
       };
 
-      const res = await fetch("/api/trip/posts", {
-        method: "POST",
+      // Only set these for new posts
+      if (!postId) {
+        post.postType = hasVideo ? "video" : hasMedia ? "photo" : hasAudio ? "voice" : "text";
+        post.layout = hasMedia ? "gallery" : hasAudio ? "voice" : "standard";
+      }
+
+      console.log("[COMPOSE] Publishing post:", { postId, method: postId ? "PUT" : "POST", post });
+
+      const endpoint = postId ? `/api/trip/posts/${postId}` : "/api/trip/posts";
+      const method = postId ? "PUT" : "POST";
+
+      const res = await fetch(endpoint, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(post),
       });
 
       if (res.ok) {
         const saved = await res.json();
-        alert("✅ זיכרון פורסם!");
-        router.push(`/trip/post/${saved.id}`);
+        const action = postId ? "✅ זיכרון עודכן!" : "✅ זיכרון פורסם!";
+        alert(action);
+        router.push(`/trip/post/${saved.id || postId}`);
       } else {
-        const err = await res.json();
-        setError(`Publish failed: ${err.error}`);
+        const text = await res.text();
+        console.log("[COMPOSE] Error response:", { status: res.status, text });
+        try {
+          const err = JSON.parse(text);
+          setError(`Publish failed: ${err.error}`);
+        } catch {
+          setError(`Publish failed: ${res.status} ${text}`);
+        }
       }
     } catch (e) {
-      setError(`Publish error: ${e instanceof Error ? e.message : String(e)}`);
+      const errorMsg = e instanceof Error ? e.message : String(e);
+      console.log("[COMPOSE] Catch error:", errorMsg);
+      setError(`Publish error: ${errorMsg}`);
     }
     setPublishing(false);
   };
@@ -363,7 +431,7 @@ function ComposeForm() {
       {/* Header */}
       <div style={{ padding: "28px 20px 16px" }}>
         <h1 className="trip-serif" style={{ margin: 0, fontSize: 32, fontWeight: 500, color: "var(--terra-d)" }}>
-          ✦ זיכרון חדש
+          ✦ {postId ? "עדכון זיכרון" : "זיכרון חדש"}
         </h1>
       </div>
 
@@ -376,6 +444,54 @@ function ComposeForm() {
           placeholder="כותרת הזיכרון (אופציונלי)"
           style={{ ...inputStyle, width: "100%" }}
         />
+      </Section>
+
+      {/* Author selection */}
+      <Section>
+        <SectionLabel>מי כותב?</SectionLabel>
+        <div style={{ display: "flex", gap: 16, overflowX: "auto", padding: "4px 0 8px", scrollbarWidth: "none" as const }}>
+          {familyList.map((member) => {
+            // Map family member to user ID (guyergas=1, mom=2, ofir=3, ayala=4, omer=5, ido=6)
+            const userIdMap: Record<string, number> = { guyergas: 1, mom: 2, ofir: 3, ayala: 4, omer: 5, ido: 6 };
+            const userId = userIdMap[member.id] || 0;
+
+            return (
+              <button
+                key={member.id}
+                onClick={() => setAuthor(userId)}
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 6,
+                  flexShrink: 0,
+                  textDecoration: "none",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  opacity: author === userId ? 1 : 0.5,
+                  transition: "opacity .2s",
+                  padding: 0,
+                }}
+              >
+                <div style={{
+                  width: 54,
+                  height: 54,
+                  borderRadius: "50%",
+                  background: member.color,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 26,
+                  boxShadow: author === userId ? `0 0 0 2.5px var(--paper, #FAF6EC), 0 0 0 4.5px ${member.color}` : `0 0 0 2.5px var(--paper, #FAF6EC), 0 0 0 4.5px ${member.color}66`,
+                }}>
+                  {member.glyph}
+                </div>
+                <span style={{ fontSize: 11, color: "var(--ink-2)", fontWeight: 500 }}>{member.name}</span>
+              </button>
+            );
+          })}
+        </div>
       </Section>
 
       {/* Description */}
@@ -502,6 +618,20 @@ function ComposeForm() {
         <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="אתר, עיר, מדינה" style={{ ...inputStyle, width: "100%", boxSizing: "border-box" }} />
       </Section>
 
+      {/* Date */}
+      <Section>
+        <SectionLabel>תאריך</SectionLabel>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          style={{ ...inputStyle, width: "100%" }}
+        />
+        <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 8 }}>
+          תאריך זה יוצג בזיכרון
+        </div>
+      </Section>
+
       {/* Location Picker Modal */}
       <LocationPicker
         isOpen={locationPickerOpen}
@@ -512,7 +642,7 @@ function ComposeForm() {
       {/* Publish */}
       <div style={{ padding: "0 16px", marginBottom: 20 }}>
         <button onClick={handlePublish} disabled={publishing || (!description.trim() && mediaItems.length === 0 && !audioUrl)} style={{ width: "100%", padding: "16px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 16, fontWeight: 700, border: "none", cursor: "pointer", opacity: publishing ? 0.5 : 1 }}>
-          {publishing ? "מפרסם..." : "פרסם זיכרון ✦"}
+          {publishing ? (postId ? "מעדכן..." : "מפרסם...") : (postId ? "עדכן זיכרון ✦" : "פרסם זיכרון ✦")}
         </button>
       </div>
     </div>

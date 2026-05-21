@@ -15,6 +15,13 @@ interface ReactionDetail {
   names: string[];
 }
 
+interface UserData {
+  id: number;
+  email: string;
+  name: string;
+  photoUrl?: string;
+}
+
 interface Props {
   post: TripPost;
   comments: Comment[];
@@ -29,9 +36,12 @@ export default function PostDetail({ post, comments: initialComments, details: i
   const [myReaction, setMyReaction] = useState("");
   const [comments, setComments] = useState(initialComments);
   const [identity, setIdentity] = useState<{ name: string; userId?: number; memberId?: string; isAdmin?: boolean } | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [commentBody, setCommentBody] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
   const [tooltipEmoji, setTooltipEmoji] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -45,6 +55,7 @@ export default function PostDetail({ post, comments: initialComments, details: i
             const userRes = await fetch(`/api/trip/users/${data.userId}`);
             if (userRes.ok) {
               const user = await userRes.json();
+              setUserData(user);
               setIdentity({ name: user.name, userId: user.id, isAdmin: true });
               return;
             }
@@ -127,6 +138,22 @@ export default function PostDetail({ post, comments: initialComments, details: i
     }
   }
 
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/trip/posts/${post.id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (res.ok) {
+        router.push("/trip");
+      }
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  }
+
   return (
     <div style={{ maxWidth: 480, margin: "0 auto", paddingBottom: 60 }}>
       {/* Hero media */}
@@ -173,13 +200,64 @@ export default function PostDetail({ post, comments: initialComments, details: i
         )}
 
         {/* Author */}
-        <Link href={`/trip/profile/${post.authorId}`} style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20, textDecoration: "none" }}>
-          <Avatar memberId={getFamilyIdByUserId(post.authorId)} size={48} ring />
-          <div style={{ flex: 1 }}>
-            <div style={{ fontWeight: 700, fontSize: 16, color: "var(--ink)" }}>{m.name}</div>
-            <div style={{ fontSize: 12, color: "var(--ink-3)" }}>{m.role} · {post.date}</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
+          <Link href={`/trip?userId=${post.authorId}`} style={{ display: "flex", alignItems: "center", gap: 12, flex: 1, textDecoration: "none" }}>
+            <Avatar memberId={getFamilyIdByUserId(post.authorId)} size={48} ring />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 16, color: "var(--ink)" }}>{m.name}</div>
+              <div style={{ fontSize: 12, color: "var(--ink-3)" }}>{m.role} · {post.date}</div>
+            </div>
+          </Link>
+          {identity?.isAdmin && (
+            <div style={{ display: "flex", gap: 8 }}>
+              <Link
+                href={`/trip/compose?postId=${post.id}`}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  background: "var(--paper)",
+                  color: "var(--ink)",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  border: "0.5px solid var(--rule)",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  textDecoration: "none",
+                  display: "inline-block",
+                }}
+              >
+                ✏️
+              </Link>
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                style={{
+                  padding: "8px 12px",
+                  borderRadius: 8,
+                  background: "rgba(220,53,69,0.1)",
+                  color: "#C0392B",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  border: "0.5px solid rgba(220,53,69,0.2)",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                }}
+              >
+                🗑️
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Location (when no photo) */}
+        {!post.photo && post.locationName && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", background: `${m.color}10`, borderRadius: 12, border: `0.5px solid ${m.color}30` }}>
+            <span style={{ fontSize: 14 }}>📍</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{post.locationName}</div>
+              <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{post.city}{post.city && post.country ? " · " : ""}{post.country}</div>
+            </div>
           </div>
-        </Link>
+        )}
 
         {/* Text */}
         <p style={{ fontSize: 17, lineHeight: 1.7, color: "var(--ink)", margin: "0 0 18px" }}>{displayText}</p>
@@ -270,7 +348,7 @@ export default function PostDetail({ post, comments: initialComments, details: i
           {!identity && (
             <div style={{ textAlign: "center", marginTop: 6 }}>
               <Link href={`/trip/login`} style={{ fontSize: 12, color: "var(--terra)", textDecoration: "underline" }}>
-                בחרו משפחה כדי להגיב
+                התחבר כדי להגיב
               </Link>
             </div>
           )}
@@ -294,16 +372,21 @@ export default function PostDetail({ post, comments: initialComments, details: i
             </form>
           ) : (
             <div style={{ marginBottom: 18, padding: "16px", background: "var(--paper)", borderRadius: 16, border: "1px solid var(--rule)", textAlign: "center" }}>
-              <p style={{ margin: "0 0 10px", fontSize: 14, color: "var(--ink-2)" }}>בחרו משפחה כדי להגיב</p>
+              <p style={{ margin: "0 0 10px", fontSize: 14, color: "var(--ink-2)" }}>התחבר כדי להגיב</p>
               <Link href={`/trip/login`} style={{ display: "inline-block", padding: "10px 20px", borderRadius: 100, background: "var(--terra)", color: "#fff", fontSize: 14, fontWeight: 700, textDecoration: "none" }}>
-                בחר משפחה
+                התחבר
               </Link>
             </div>
           )}
 
           {/* Comment list */}
           {comments.map((c) => {
-            const userName = c.authorId > 0 ? `User ${c.authorId}` : "Guest";
+            let userName = "Guest";
+            if (c.authorId > 0 && userData && userData.id === c.authorId) {
+              userName = userData.name;
+            } else if (c.authorId > 0) {
+              userName = `User ${c.authorId}`;
+            }
             const userInitial = userName.charAt(0).toUpperCase();
             return (
               <div key={c.id} style={{ display: "flex", gap: 10, marginBottom: 14 }}>
@@ -324,6 +407,70 @@ export default function PostDetail({ post, comments: initialComments, details: i
           })}
         </div>
       </div>
+
+      {/* Delete confirmation dialog */}
+      {showDeleteConfirm && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+        }}>
+          <div style={{
+            background: "var(--ivory)",
+            borderRadius: 16,
+            padding: 24,
+            maxWidth: 320,
+            boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+          }}>
+            <h2 className="trip-serif" style={{ margin: "0 0 12px", fontSize: 24, fontWeight: 500, color: "var(--ink)" }}>
+              למחוק את הזיכרון?
+            </h2>
+            <p style={{ margin: "0 0 20px", fontSize: 14, color: "var(--ink-2)", lineHeight: 1.6 }}>
+              פעולה זו לא ניתן לשנות. בטוחים שברצונכם למחוק את הזיכרון הזה?
+            </p>
+            <div style={{ display: "flex", gap: 12 }}>
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: "var(--paper)",
+                  color: "var(--ink)",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  border: "0.5px solid var(--rule)",
+                  cursor: "pointer",
+                }}
+              >
+                ביטול
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{
+                  flex: 1,
+                  padding: 12,
+                  borderRadius: 8,
+                  background: "#C0392B",
+                  color: "#fff",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  border: "none",
+                  cursor: deleting ? "wait" : "pointer",
+                  opacity: deleting ? 0.6 : 1,
+                }}
+              >
+                {deleting ? "...מוחק" : "מחק"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

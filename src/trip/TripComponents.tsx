@@ -199,7 +199,8 @@ interface PostCardProps {
 }
 
 export function PostCard({ post }: PostCardProps) {
-  const m = family[post.authorId] || family.guyergas;
+  const familyId = getFamilyIdByUserId(post.authorId);
+  const m = family[familyId] || family.guyergas;
   const isHero = post.layout === "hero";
   const isVoice = post.layout === "voice";
   const tilt = postTilt(post.id);

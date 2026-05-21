@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPost, savePost, deletePost } from "@/trip/store";
+import { getPost, savePost, deletePost, getReactionCounts, getComments } from "@/trip/store";
 import { isAdminRequest } from "@/trip/auth";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const post = getPost(id);
   if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  return NextResponse.json(post);
+
+  const postWithCounts = {
+    ...post,
+    likes: Object.values(getReactionCounts(id)).reduce((a, b) => a + b, 0),
+    comments: getComments(id).length,
+  };
+  return NextResponse.json(postWithCounts);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

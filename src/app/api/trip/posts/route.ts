@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPosts, savePost } from "@/trip/store";
+import { getPosts, savePost, getReactionCounts, getComments } from "@/trip/store";
 import { isAdminRequest } from "@/trip/auth";
 import { posts as seedPosts } from "@/trip/data";
 import { nanoid } from "nanoid";
@@ -15,7 +15,15 @@ function ensureSeeded() {
 export async function GET() {
   ensureSeeded();
   const posts = getPosts();
-  return NextResponse.json(posts);
+
+  // Calculate actual counts for each post
+  const postsWithCounts = posts.map(post => ({
+    ...post,
+    likes: Object.values(getReactionCounts(post.id)).reduce((a, b) => a + b, 0),
+    comments: getComments(post.id).length,
+  }));
+
+  return NextResponse.json(postsWithCounts);
 }
 
 export async function POST(req: NextRequest) {
