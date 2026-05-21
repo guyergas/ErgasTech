@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { TripPost, FamilyMember } from "@/trip/data";
@@ -42,6 +42,7 @@ export default function PostDetail({ post, comments: initialComments, details: i
   const [tooltipEmoji, setTooltipEmoji] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showLocationMap, setShowLocationMap] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -183,9 +184,15 @@ export default function PostDetail({ post, comments: initialComments, details: i
         {(post.photo || (post.mediaItems && post.mediaItems.length > 0)) && (
           <div style={{ position: "absolute", bottom: 22, right: 20, left: 20, color: "#fff" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 6 }}>
-              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 100, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", fontSize: 12, fontWeight: 500 }}>
-                📍 {[post.locationName, post.city, post.country].filter(p => p && p.length > 0).join(", ")}
-              </span>
+              {post.lat && post.lng ? (
+                <span onClick={() => setShowLocationMap(true)} style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 100, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", fontSize: 12, fontWeight: 500, cursor: "pointer" }}>
+                  📍 {[post.locationName, post.city, post.country].filter(p => p && p.length > 0).join(", ")}
+                </span>
+              ) : (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 100, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", fontSize: 12, fontWeight: 500 }}>
+                  📍 {[post.locationName, post.city, post.country].filter(p => p && p.length > 0).join(", ")}
+                </span>
+              )}
               <span style={{ padding: "4px 10px", borderRadius: 100, background: "rgba(0,0,0,0.45)", backdropFilter: "blur(8px)", fontSize: 12 }}>יום {post.day}</span>
             </div>
             <h1 className="trip-serif" style={{ margin: 0, fontSize: 32, lineHeight: 1.1, fontWeight: 500, textShadow: "0 2px 12px rgba(0,0,0,0.4)" }}>{post.title}</h1>
@@ -250,7 +257,7 @@ export default function PostDetail({ post, comments: initialComments, details: i
 
         {/* Location (when no photo) */}
         {!post.photo && post.locationName && (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", background: `${m.color}10`, borderRadius: 12, border: `0.5px solid ${m.color}30` }}>
+          <div onClick={() => post.lat && post.lng && setShowLocationMap(true)} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 16, padding: "8px 12px", background: `${m.color}10`, borderRadius: 12, border: `0.5px solid ${m.color}30`, cursor: post.lat && post.lng ? "pointer" : "default" }}>
             <span style={{ fontSize: 14 }}>📍</span>
             <div>
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)" }}>{post.locationName}</div>
@@ -471,6 +478,66 @@ export default function PostDetail({ post, comments: initialComments, details: i
           </div>
         </div>
       )}
+
+      {/* Location Map Modal */}
+      {showLocationMap && post.lat && post.lng && (
+        <div onClick={() => setShowLocationMap(false)} style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, padding: "20px" }}>
+          <div onClick={(e) => e.stopPropagation()} style={{ background: "#fff", borderRadius: 20, width: "100%", maxWidth: 400, maxHeight: "80vh", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }}>
+            <div style={{ padding: "16px 20px", borderBottom: "0.5px solid var(--rule)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "var(--terra)" }}>
+                {[post.locationName, post.city, post.country].filter(p => p && p.length > 0).join(", ")}
+              </h2>
+              <button onClick={() => setShowLocationMap(false)} style={{ background: "none", border: "none", fontSize: 24, cursor: "pointer", color: "var(--ink-3)" }}>✕</button>
+            </div>
+            <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+              {typeof window !== "undefined" && (
+                <LocationMapEmbed lat={post.lat} lng={post.lng} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+}
+
+// Simple inline map component
+function LocationMapEmbed({ lat, lng }: { lat: number; lng: number }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) return;
+
+    (async () => {
+      const L = (await import("leaflet")).default;
+
+      delete (L.Icon.Default.prototype as any)._getIconUrl;
+      L.Icon.Default.mergeOptions({
+        iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
+        iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
+        shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
+      });
+
+      const map = L.map(containerRef.current!, {
+        center: [lat, lng],
+        zoom: 13,
+        scrollWheelZoom: true,
+      });
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "© OpenStreetMap contributors",
+        maxZoom: 18,
+      }).addTo(map);
+
+      L.marker([lat, lng], { title: "Location" })
+        .addTo(map)
+        .bindPopup("📍 Your location")
+        .openPopup();
+
+      mapRef.current = map;
+    })();
+  }, [lat, lng]);
+
+  return <div ref={containerRef} style={{ width: "100%", height: "100%" }} />;
 }
