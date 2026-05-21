@@ -115,12 +115,30 @@ function TripHomeContent() {
     router.push("/trip");
   }
 
-  // Group posts by day descending
-  const byDay = new Map<number, TripPost[]>();
-  for (const p of posts) {
-    const arr = byDay.get(p.day) ?? [];
+  // Calculate day from date order
+  const validDates = posts
+    .map(p => {
+      const d = new Date(p.date);
+      return isNaN(d.getTime()) ? null : d;
+    })
+    .filter((d): d is Date => d !== null);
+
+  const oldestDate = validDates.length > 0 ? new Date(Math.min(...validDates.map(d => d.getTime()))) : null;
+
+  const postsWithCalculatedDay = posts.map(p => {
+    if (!oldestDate) return { ...p, calculatedDay: p.day };
+    const pDate = new Date(p.date);
+    if (isNaN(pDate.getTime())) return { ...p, calculatedDay: p.day };
+    const daysDiff = Math.floor((pDate.getTime() - oldestDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return { ...p, calculatedDay: daysDiff };
+  });
+
+  // Group posts by calculated day descending
+  const byDay = new Map<number, typeof postsWithCalculatedDay>();
+  for (const p of postsWithCalculatedDay) {
+    const arr = byDay.get(p.calculatedDay) ?? [];
     arr.push(p);
-    byDay.set(p.day, arr);
+    byDay.set(p.calculatedDay, arr);
   }
   const days = Array.from(byDay.keys()).sort((a, b) => b - a);
 
@@ -136,7 +154,7 @@ function TripHomeContent() {
 
   // Calculate km
   let kms = 0;
-  const sortedPosts = [...posts].sort((a, b) => a.day - b.day);
+  const sortedPosts = [...postsWithCalculatedDay].sort((a, b) => a.calculatedDay - b.calculatedDay);
   for (let i = 0; i < sortedPosts.length - 1; i++) {
     const curr = sortedPosts[i];
     const next = sortedPosts[i + 1];

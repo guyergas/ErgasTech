@@ -391,7 +391,7 @@ export function PostCard({ post }: PostCardProps) {
             borderRadius: 6,
           }}
         >
-          יום {post.day}
+          יום {(post as any).calculatedDay ?? post.day}
         </div>
       </div>
     </Link>
