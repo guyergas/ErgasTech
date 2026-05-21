@@ -151,17 +151,22 @@ function ComposeForm() {
 
   // ─── Location Selection ──────────────────────────────────
   const handleLocationSelect = (locationStr: string, locLat: number, locLng: number) => {
-    setLocation(locationStr);
     setLat(locLat);
     setLng(locLng);
 
-    // Parse city and country from location string (format: "site, city, country")
+    // Parse location string (format: "site, city, country")
     const parts = locationStr.split(",").map(p => p.trim());
-    if (parts.length >= 2) {
-      const parsedCountry = parts[parts.length - 1];
-      const parsedCity = parts[parts.length - 2];
-      setCity(parsedCity);
-      setCountry(parsedCountry);
+
+    // Set locationName to just the place name (first part)
+    setLocation(parts[0] || locationStr);
+
+    // Extract and set city and country (last 2 parts)
+    if (parts.length >= 3) {
+      setCity(parts[parts.length - 2]);
+      setCountry(parts[parts.length - 1]);
+    } else if (parts.length === 2) {
+      setCity("");
+      setCountry(parts[1]);
     }
   };
 
